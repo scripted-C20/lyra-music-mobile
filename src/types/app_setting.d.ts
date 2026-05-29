@@ -317,6 +317,11 @@ declare global {
       'desktopLyric.style.backgroundColor': string
 
       /**
+       * 桌面歌词背景透明度
+       */
+      'desktopLyric.style.backgroundOpacity': number
+
+      /**
        * 是否启用状态栏歌词
        */
       'statusBarLyric.enable': boolean
@@ -395,6 +400,11 @@ declare global {
        * 状态栏歌词背景颜色
        */
       'statusBarLyric.style.backgroundColor': string
+
+      /**
+       * 状态栏歌词背景透明度
+       */
+      'statusBarLyric.style.backgroundOpacity': number
 
       /**
        * 是否显示热门搜索

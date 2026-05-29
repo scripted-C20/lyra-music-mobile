@@ -3,6 +3,7 @@ import { pause, playNext } from '@/core/player/player'
 import { setStatusText, setIsPlay } from '@/core/player/playStatus'
 // import { resetPlayerMusicInfo } from '@/core/player/playInfo'
 import { setStop } from '@/plugins/player'
+import { updateOptions } from '@/plugins/player/utils'
 import { delayUpdateMusicInfo } from '@/plugins/player/playList'
 import playerState from '@/store/player/state'
 import settingState from '@/store/setting/state'
@@ -86,6 +87,10 @@ export default async(setting: LX.AppSetting) => {
       const playMusicInfo = playerState.playMusicInfo
       if (newValue == 'random' && playMusicInfo.musicInfo && !playMusicInfo.isTempPlay) addPlayedList({ ...(playMusicInfo as LX.Player.PlayMusicInfo) })
     }
+    if (keys.includes('player.isShowNotificationImage')) {
+      void updateOptions()
+      updatePic()
+    }
   }
 
 
@@ -96,4 +101,7 @@ export default async(setting: LX.AppSetting) => {
   global.app_event.on('playerEnded', handleEnded)
   global.app_event.on('picUpdated', updatePic)
   global.state_event.on('configUpdated', handleConfigUpdated)
+  global.state_event.on('themeUpdated', () => {
+    void updateOptions()
+  })
 }

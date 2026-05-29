@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import Button from '../../components/Button'
@@ -11,6 +11,7 @@ import { Icon } from '@/components/common/Icon'
 import { updateSetting } from '@/core/common'
 import {
   setStatusBarLyricAlpha,
+  setStatusBarLyricBackgroundOpacity,
   setStatusBarLyricBackgroundColor,
   setStatusBarLyricColor,
   setStatusBarLyricMaxLineNum,
@@ -26,6 +27,7 @@ import {
 import { useI18n } from '@/lang'
 import { useSettingValue } from '@/store/setting/hook'
 import { useDS } from '@/theme/useDS'
+import { applyColorOpacity } from '@/utils/color'
 import { toast } from '@/utils/tools'
 
 interface StatusPreset {
@@ -46,7 +48,8 @@ const BASE_PRESET_SETTING: Partial<LX.AppSetting> = {
   'statusBarLyric.style.lyricUnplayColor': 'rgba(255, 255, 255, 1)',
   'statusBarLyric.style.lyricPlayedColor': 'rgba(255, 255, 255, 1)',
   'statusBarLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.5)',
-  'statusBarLyric.style.backgroundColor': 'rgba(0, 0, 0, 0.42)',
+  'statusBarLyric.style.backgroundColor': 'rgba(0, 0, 0, 1)',
+  'statusBarLyric.style.backgroundOpacity': 42,
 }
 
 const STATUS_PRESETS: StatusPreset[] = [
@@ -55,9 +58,9 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_center',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 64,
-      'statusBarLyric.position.x': 18,
-      'statusBarLyric.position.y': 0,
+      'statusBarLyric.width': 52,
+      'statusBarLyric.position.x': 24,
+      'statusBarLyric.position.y': 0.6,
     },
   },
   {
@@ -65,9 +68,9 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_xiaomi',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 58,
-      'statusBarLyric.position.x': 21,
-      'statusBarLyric.position.y': 0,
+      'statusBarLyric.width': 44,
+      'statusBarLyric.position.x': 28,
+      'statusBarLyric.position.y': 0.6,
     },
   },
   {
@@ -75,9 +78,9 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_huawei',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 54,
-      'statusBarLyric.position.x': 23,
-      'statusBarLyric.position.y': 1,
+      'statusBarLyric.width': 46,
+      'statusBarLyric.position.x': 27,
+      'statusBarLyric.position.y': 0.7,
     },
   },
   {
@@ -85,14 +88,16 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_meizu',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 72,
-      'statusBarLyric.position.x': 14,
-      'statusBarLyric.position.y': 0,
-      'statusBarLyric.style.fontSize': 124,
+      'statusBarLyric.width': 54,
+      'statusBarLyric.position.x': 5,
+      'statusBarLyric.position.y': 0.35,
+      'statusBarLyric.textPosition.x': 'left',
+      'statusBarLyric.style.fontSize': 156,
       'statusBarLyric.style.lyricUnplayColor': 'theme',
       'statusBarLyric.style.lyricPlayedColor': 'theme',
       'statusBarLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.68)',
       'statusBarLyric.style.backgroundColor': 'rgba(0, 0, 0, 0)',
+      'statusBarLyric.style.backgroundOpacity': 0,
     },
   },
   {
@@ -100,9 +105,9 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_ov',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 68,
-      'statusBarLyric.position.x': 16,
-      'statusBarLyric.position.y': 0,
+      'statusBarLyric.width': 48,
+      'statusBarLyric.position.x': 26,
+      'statusBarLyric.position.y': 0.6,
     },
   },
   {
@@ -110,9 +115,9 @@ const STATUS_PRESETS: StatusPreset[] = [
     nameKey: 'setting_lyric_statusbar_preset_samsung',
     setting: {
       ...BASE_PRESET_SETTING,
-      'statusBarLyric.width': 50,
-      'statusBarLyric.position.x': 25,
-      'statusBarLyric.position.y': 0,
+      'statusBarLyric.width': 42,
+      'statusBarLyric.position.x': 29,
+      'statusBarLyric.position.y': 0.7,
     },
   },
 ]
@@ -126,16 +131,16 @@ const TEXT_COLORS = [
 
 const BACKGROUND_COLORS = [
   'rgba(0, 0, 0, 0)',
-  'rgba(0, 0, 0, 0.42)',
-  'rgba(255, 59, 48, 0.72)',
-  'rgba(255, 255, 255, 0.88)',
+  'rgba(0, 0, 0, 1)',
+  'rgba(255, 59, 48, 1)',
+  'rgba(255, 255, 255, 1)',
 ] as const
 
 const RESET_SETTING: Partial<LX.AppSetting> = {
   ...BASE_PRESET_SETTING,
-  'statusBarLyric.width': 64,
-  'statusBarLyric.position.x': 18,
-  'statusBarLyric.position.y': 0,
+  'statusBarLyric.width': 52,
+  'statusBarLyric.position.x': 24,
+  'statusBarLyric.position.y': 0.6,
 }
 
 const applyPresetToNative = async(setting: Partial<LX.AppSetting>) => {
@@ -152,7 +157,10 @@ const applyPresetToNative = async(setting: Partial<LX.AppSetting>) => {
     setting['statusBarLyric.style.lyricPlayedColor']!,
     setting['statusBarLyric.style.lyricShadowColor']!,
   )
-  await setStatusBarLyricBackgroundColor(setting['statusBarLyric.style.backgroundColor']!)
+  await setStatusBarLyricBackgroundColor(
+    setting['statusBarLyric.style.backgroundColor']!,
+    setting['statusBarLyric.style.backgroundOpacity'],
+  )
 }
 
 const ColorChip = ({ color, active, onPress }: {
@@ -190,7 +198,7 @@ const normalizeSliderValue = (value: number, precision?: number) => {
   return precision == null ? value : Number(value.toFixed(precision))
 }
 
-const StatusSlider = ({ title, value, min, max, step, precision, onApply }: {
+const StatusSlider = ({ title, value, min, max, step, precision, onApply, onPreview }: {
   title: string
   value: number
   min: number
@@ -198,20 +206,38 @@ const StatusSlider = ({ title, value, min, max, step, precision, onApply }: {
   step: number
   precision?: number
   onApply: (value: number) => Promise<void>
+  onPreview?: (value: number) => void
 }) => {
   const ds = useDS()
   const [sliderValue, setSliderValue] = useState(value)
   const [isSliding, setSliding] = useState(false)
+  const previewValueRef = useRef(value)
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const displayValue = isSliding ? sliderValue : value
 
   const handleSlidingStart = useCallback<NonNullable<SliderProps['onSlidingStart']>>(() => {
+    previewValueRef.current = value
     setSliding(true)
-  }, [])
+  }, [value])
   const handleValueChange = useCallback<NonNullable<SliderProps['onValueChange']>>(nextValue => {
-    setSliderValue(normalizeSliderValue(nextValue, precision))
-  }, [precision])
+    const normalizedValue = normalizeSliderValue(nextValue, precision)
+    setSliderValue(normalizedValue)
+    if (!onPreview || previewValueRef.current == normalizedValue) return
+
+    previewValueRef.current = normalizedValue
+    if (previewTimerRef.current) return
+    previewTimerRef.current = setTimeout(() => {
+      previewTimerRef.current = null
+      onPreview(previewValueRef.current)
+    }, 24)
+  }, [onPreview, precision])
   const handleSlidingComplete = useCallback<NonNullable<SliderProps['onSlidingComplete']>>(nextValue => {
     const normalizedValue = normalizeSliderValue(nextValue, precision)
+    if (previewTimerRef.current) {
+      clearTimeout(previewTimerRef.current)
+      previewTimerRef.current = null
+    }
+    onPreview?.(normalizedValue)
     if (normalizedValue == value) {
       setSliding(false)
       return
@@ -219,7 +245,13 @@ const StatusSlider = ({ title, value, min, max, step, precision, onApply }: {
     void onApply(normalizedValue).finally(() => {
       setSliding(false)
     })
-  }, [onApply, precision, value])
+  }, [onApply, onPreview, precision, value])
+
+  useEffect(() => {
+    return () => {
+      if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
+    }
+  }, [])
 
   return (
     <View style={styles.sliderLine}>
@@ -248,11 +280,13 @@ export default memo(() => {
   const positionY = useSettingValue('statusBarLyric.position.y')
   const fontSize = useSettingValue('statusBarLyric.style.fontSize')
   const opacity = useSettingValue('statusBarLyric.style.opacity')
+  const backgroundOpacity = useSettingValue('statusBarLyric.style.backgroundOpacity')
   const textColor = useSettingValue('statusBarLyric.style.lyricPlayedColor')
   const shadowColor = useSettingValue('statusBarLyric.style.lyricShadowColor')
   const backgroundColor = useSettingValue('statusBarLyric.style.backgroundColor')
   const desktopLyricEnableRef = useRef<DesktopLyricEnableType>(null)
   const previewTextColor = textColor == 'theme' ? ds.accent : textColor
+  const previewBackgroundColor = applyColorOpacity(backgroundColor, backgroundOpacity)
 
   const handleToggleStatusBarLyric = useCallback((enabled: boolean) => {
     desktopLyricEnableRef.current?.setEnabled(enabled)
@@ -299,10 +333,16 @@ export default memo(() => {
   }, [shadowColor])
 
   const handleChangeBackgroundColor = useCallback((color: string) => {
-    void setStatusBarLyricBackgroundColor(color).then(() => {
-      updateSetting({ 'statusBarLyric.style.backgroundColor': color })
+    const nextOpacity = color == 'rgba(0, 0, 0, 0)'
+      ? 0
+      : backgroundOpacity <= 0 ? 42 : backgroundOpacity
+    void setStatusBarLyricBackgroundColor(color, nextOpacity).then(() => {
+      updateSetting({
+        'statusBarLyric.style.backgroundColor': color,
+        'statusBarLyric.style.backgroundOpacity': nextOpacity,
+      })
     })
-  }, [])
+  }, [backgroundOpacity])
 
   const applyPosition = useCallback(async(x: number, y: number) => {
     await setStatusBarLyricPosition(x, y)
@@ -325,7 +365,7 @@ export default memo(() => {
       </View>
 
       <View style={[styles.preview, { backgroundColor: ds.bgCard, borderColor: ds.separator }]}>
-        <View style={[styles.phoneBar, { backgroundColor }]}>
+        <View style={[styles.phoneBar, { backgroundColor: previewBackgroundColor }]}>
           <View style={[styles.cameraDot, { backgroundColor: ds.bg }]} />
           <Text size={11} color={previewTextColor} numberOfLines={1} style={styles.previewText}>
             {t('setting_lyric_statusbar_preview')}
@@ -402,21 +442,35 @@ export default memo(() => {
           }}
         />
         <StatusSlider
+          title={t('setting_lyric_statusbar_background_opacity')}
+          value={backgroundOpacity}
+          min={0}
+          max={100}
+          step={2}
+          onPreview={(value) => { void setStatusBarLyricBackgroundOpacity(value) }}
+          onApply={async value => {
+            await setStatusBarLyricBackgroundOpacity(value)
+            updateSetting({ 'statusBarLyric.style.backgroundOpacity': value })
+          }}
+        />
+        <StatusSlider
           title={t('setting_lyric_statusbar_move_x')}
           value={positionX}
           min={0}
           max={100}
           step={0.1}
           precision={1}
+          onPreview={(value) => { void setStatusBarLyricPosition(value, positionY) }}
           onApply={async value => applyPosition(value, positionY)}
         />
         <StatusSlider
           title={t('setting_lyric_statusbar_move_y')}
           value={positionY}
           min={0}
-          max={12}
+          max={18}
           step={0.1}
           precision={1}
+          onPreview={(value) => { void setStatusBarLyricPosition(positionX, value) }}
           onApply={async value => applyPosition(positionX, value)}
         />
       </SubTitle>

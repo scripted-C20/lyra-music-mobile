@@ -34,6 +34,7 @@ import {
   setStatusBarLyricTextPosition as setStatusBarNativeLyricTextPosition,
   checkOverlayPermission,
   openOverlayPermissionActivity,
+  isFlymeStatusBarLyricSupported,
   onPositionChange,
 } from '@/utils/nativeModules/lyricDesktop'
 import settingState from '@/store/setting/state'
@@ -41,11 +42,26 @@ import playerState from '@/store/player/state'
 import themeState from '@/store/theme/state'
 import { tranditionalize } from '@/utils/simplify-chinese-main'
 import { getPosition } from '@/plugins/player'
+import { applyColorOpacity } from '@/utils/color'
 export {
   onLyricLinePlay,
 } from '@/utils/nativeModules/lyricDesktop'
 
 const resolveThemeLyricColor = (color: string) => color == 'theme' ? themeState.theme['c-primary'] : color
+const getEffectiveDesktopBackgroundColor = (color?: string | null, opacity?: number | null) => {
+  const setting = settingState.setting
+  return applyColorOpacity(
+    color ?? setting['desktopLyric.style.backgroundColor'],
+    opacity ?? setting['desktopLyric.style.backgroundOpacity'],
+  )
+}
+const getEffectiveStatusBarBackgroundColor = (color?: string | null, opacity?: number | null) => {
+  const setting = settingState.setting
+  return applyColorOpacity(
+    color ?? setting['statusBarLyric.style.backgroundColor'],
+    opacity ?? setting['statusBarLyric.style.backgroundOpacity'],
+  )
+}
 type LyricOverlayMode = 'desktop' | 'statusBar'
 
 const getOverlaySetting = (mode: LyricOverlayMode) => {
@@ -59,7 +75,7 @@ const getOverlaySetting = (mode: LyricOverlayMode) => {
       unplayColor: resolveThemeLyricColor(setting['statusBarLyric.style.lyricUnplayColor']),
       playedColor: resolveThemeLyricColor(setting['statusBarLyric.style.lyricPlayedColor']),
       shadowColor: setting['statusBarLyric.style.lyricShadowColor'],
-      backgroundColor: setting['statusBarLyric.style.backgroundColor'],
+      backgroundColor: getEffectiveStatusBarBackgroundColor(),
       opacity: setting['statusBarLyric.style.opacity'],
       textSize: setting['statusBarLyric.style.fontSize'],
       width: setting['statusBarLyric.width'],
@@ -79,7 +95,7 @@ const getOverlaySetting = (mode: LyricOverlayMode) => {
     unplayColor: resolveThemeLyricColor(setting['desktopLyric.style.lyricUnplayColor']),
     playedColor: resolveThemeLyricColor(setting['desktopLyric.style.lyricPlayedColor']),
     shadowColor: setting['desktopLyric.style.lyricShadowColor'],
-    backgroundColor: setting['desktopLyric.style.backgroundColor'],
+    backgroundColor: getEffectiveDesktopBackgroundColor(),
     opacity: setting['desktopLyric.style.opacity'],
     textSize: setting['desktopLyric.style.fontSize'],
     width: setting['desktopLyric.width'],
@@ -93,8 +109,6 @@ const getOverlaySetting = (mode: LyricOverlayMode) => {
 
 const showLyricOverlay = async(mode: LyricOverlayMode) => {
   const setting = settingState.setting
-  if (mode == 'statusBar') await showStatusBarLyricView(getOverlaySetting(mode))
-  else await showDesktopLyricView(getOverlaySetting(mode))
   let lrc = playerState.musicInfo.lrc ?? ''
   let tlrc = playerState.musicInfo.tlrc ?? ''
   let rlrc = playerState.musicInfo.rlrc ?? ''
@@ -102,6 +116,9 @@ const showLyricOverlay = async(mode: LyricOverlayMode) => {
     lrc = tranditionalize(lrc)
     tlrc = tranditionalize(tlrc)
   }
+  await setLyric(lrc, tlrc, rlrc)
+  if (mode == 'statusBar') await showStatusBarLyricView(getOverlaySetting(mode))
+  else await showDesktopLyricView(getOverlaySetting(mode))
   await setLyric(lrc, tlrc, rlrc)
   if (playerState.isPlay && !global.lx.gettingUrlId) {
     void getPosition().then(position => {
@@ -144,10 +161,15 @@ export const setDesktopLyricColor = async(unplayColor: string | null, playedColo
     shadowColor ?? setting['desktopLyric.style.lyricShadowColor'],
   )
 }
-export const setDesktopLyricBackgroundColor = async(backgroundColor: string | null) => {
+export const setDesktopLyricBackgroundColor = async(backgroundColor: string | null, opacity?: number | null) => {
   const setting = settingState.setting
   if (!setting['desktopLyric.enable']) return
-  return setBackgroundColor(backgroundColor ?? setting['desktopLyric.style.backgroundColor'])
+  return setBackgroundColor(getEffectiveDesktopBackgroundColor(backgroundColor, opacity))
+}
+export const setDesktopLyricBackgroundOpacity = async(opacity: number | null) => {
+  const setting = settingState.setting
+  if (!setting['desktopLyric.enable']) return
+  return setBackgroundColor(getEffectiveDesktopBackgroundColor(null, opacity))
 }
 export const setDesktopLyricStatusBarMode = async(isStatusBarMode: boolean) => {
   if (!settingState.setting['desktopLyric.enable']) return
@@ -192,9 +214,13 @@ export const setStatusBarLyricColor = async(unplayColor: string | null, playedCo
     shadowColor ?? settingState.setting['statusBarLyric.style.lyricShadowColor'],
   )
 }
-export const setStatusBarLyricBackgroundColor = async(backgroundColor: string | null) => {
+export const setStatusBarLyricBackgroundColor = async(backgroundColor: string | null, opacity?: number | null) => {
   if (!settingState.setting['statusBarLyric.enable']) return
-  return setStatusBarBackgroundColor(backgroundColor ?? settingState.setting['statusBarLyric.style.backgroundColor'])
+  return setStatusBarBackgroundColor(getEffectiveStatusBarBackgroundColor(backgroundColor, opacity))
+}
+export const setStatusBarLyricBackgroundOpacity = async(opacity: number | null) => {
+  if (!settingState.setting['statusBarLyric.enable']) return
+  return setStatusBarBackgroundColor(getEffectiveStatusBarBackgroundColor(null, opacity))
 }
 export const setStatusBarLyricAlpha = async(alpha: number) => {
   if (!settingState.setting['statusBarLyric.enable']) return
@@ -229,6 +255,10 @@ export const setStatusBarLyricTextPosition = async(x: LX.AppSetting['statusBarLy
   return setStatusBarNativeLyricTextPosition(x ?? settingState.setting['statusBarLyric.textPosition.x'], y ?? settingState.setting['statusBarLyric.textPosition.y'])
 }
 export const checkDesktopLyricOverlayPermission = checkOverlayPermission
+export const checkStatusBarLyricPermission = async() => {
+  if (await isFlymeStatusBarLyricSupported()) return
+  return checkOverlayPermission()
+}
 export const openDesktopLyricOverlayPermissionActivity = openOverlayPermissionActivity
 export const onDesktopLyricPositionChange = onPositionChange
 

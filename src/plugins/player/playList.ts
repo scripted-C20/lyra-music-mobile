@@ -228,6 +228,7 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
     album: mInfo.album ?? undefined,
     artwork,
     duration: state.prevDuration || 0,
+    elapsedTime: playerState.progress.nowPlayTime,
     lyric: getCurrentFullLyric(mInfo.id),
   }, state.isPlaying)
 }

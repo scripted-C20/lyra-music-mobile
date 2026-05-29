@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.SensorManager;
 import android.os.Build;
@@ -13,10 +14,12 @@ import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
+import android.view.DisplayCutout;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 
 import com.facebook.react.bridge.Arguments;
@@ -24,13 +27,14 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.WritableMap;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import cn.toside.music.mobile.R;
 
 public class LyricView extends Activity implements View.OnTouchListener {
-  private static final float TOUCH_THROUGH_WINDOW_ALPHA = 0.72f;
+  private static final float TOUCH_THROUGH_WINDOW_ALPHA = 0.92f;
 
   LyricSwitchView textView = null;
   WindowManager windowManager = null;
@@ -77,6 +81,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
 
   private int mLastRotation;
   private OrientationEventListener orientationEventListener = null;
+  private long lastBringToFrontTime = 0;
 
   final Handler fixViewPositionHandler;
   final Runnable fixViewPositionRunnable = this::updateViewPosition;
@@ -138,7 +143,10 @@ public class LyricView extends Activity implements View.OnTouchListener {
     if (layoutParams == null) return;
     layoutParams.flags = getLayoutParamsFlags();
     if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-      layoutParams.alpha = isTouchThroughMode() ? TOUCH_THROUGH_WINDOW_ALPHA : 1.0f;
+      layoutParams.alpha = isStatusBarMode ? 1.0f : isTouchThroughMode() ? TOUCH_THROUGH_WINDOW_ALPHA : 1.0f;
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      layoutParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
     }
   }
 
@@ -159,9 +167,29 @@ public class LyricView extends Activity implements View.OnTouchListener {
   private void setLayoutParamsHeight() {
     if (textView == null) return;
     int height = textView.getPaint().getFontMetricsInt(null) * maxLineNum;
+    if (isStatusBarMode) height += getStatusBarVerticalPadding() * 2;
     if (height > maxHeight - 100) height = maxHeight - 100;
     layoutParams.height = height;
     textView.setHeight(height);
+  }
+
+  private int getStatusBarVerticalPadding() {
+    return Math.max(2, (int) (textSize * 0.08f));
+  }
+
+  private int getStatusBarHorizontalPadding() {
+    return Math.max(8, (int) (textSize * 0.28f));
+  }
+
+  private void applyTextPadding() {
+    if (textView == null) return;
+    if (isStatusBarMode) {
+      int verticalPadding = getStatusBarVerticalPadding();
+      int horizontalPadding = getStatusBarHorizontalPadding();
+      textView.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+    } else {
+      textView.setPadding(0, 0, 0, 0);
+    }
   }
 
   private void fixViewPosition() {
@@ -190,11 +218,63 @@ public class LyricView extends Activity implements View.OnTouchListener {
     }
 
     fixViewPosition();
+    applyStatusBarCutoutAvoidance();
     // Log.d("Lyric", "widthPercentage: " + widthPercentage + "  prevViewPercentageX: " + prevViewPercentageX);
     // Log.d("Lyric", "prevViewPercentageY: " + prevViewPercentageY + "  layoutParams.x: " + layoutParams.x);
     // Log.d("Lyric", "layoutParams.y: " + layoutParams.y + "  layoutParams.width: " + layoutParams.width);
 
     windowManager.updateViewLayout(textView, layoutParams);
+  }
+
+  private boolean isLeftStatusBarLayout() {
+    return isStatusBarMode && "LEFT".equals(textX);
+  }
+
+  private boolean applyStatusBarCutoutAvoidance() {
+    if (!isLeftStatusBarLayout() || textView == null || layoutParams == null) return false;
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false;
+
+    WindowInsets insets = textView.getRootWindowInsets();
+    if (insets == null || insets.getDisplayCutout() == null) return false;
+
+    DisplayCutout cutout = insets.getDisplayCutout();
+    List<Rect> rects = cutout.getBoundingRects();
+    if (rects == null || rects.isEmpty()) return false;
+
+    int leftLimit = maxWidth;
+    int screenCenter = maxWidth / 2;
+    for (Rect rect : rects) {
+      if (rect == null || rect.width() <= 0 || rect.height() <= 0) continue;
+      if (Math.abs(rect.centerX() - screenCenter) > maxWidth * 0.25f) continue;
+      leftLimit = Math.min(leftLimit, rect.left);
+    }
+    if (leftLimit >= maxWidth) return false;
+
+    int safeRight = Math.max(layoutParams.x + 80, leftLimit - Math.max(12, (int) (textSize * 0.42f)));
+    int safeWidth = safeRight - layoutParams.x;
+    if (safeWidth <= 0 || safeWidth >= layoutParams.width) return false;
+
+    layoutParams.width = safeWidth;
+    textView.setWidth(safeWidth);
+    return true;
+  }
+
+  private void removeCurrentTextView() {
+    if (textView == null || windowManager == null) {
+      textView = null;
+      return;
+    }
+    try {
+      windowManager.removeViewImmediate(textView);
+    } catch (Exception immediateError) {
+      try {
+        windowManager.removeView(textView);
+      } catch (Exception removeError) {
+        Log.e("Lyric", removeError.getMessage());
+      }
+    } finally {
+      textView = null;
+    }
   }
 
   public void sendPositionEvent(float x, float y) {
@@ -278,6 +358,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
     textView.setShadowColor(parseColor(shadowColor));
     textView.setAlpha(alpha);
     textView.setTextSize(textSize);
+    applyTextPadding();
     // Log.d("Lyric", "alpha: " + alpha + " text size: " + textSize);
 
     //监听 OnTouch 事件 为了实现"移动歌词"功能
@@ -342,7 +423,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
 
     // 注意，悬浮窗只有一个，而当打开应用的时候才会产生悬浮窗，所以要判断悬浮窗是否已经存在，
     if (textView != null) {
-      windowManager.removeView(textView);
+      removeCurrentTextView();
     }
 
     // 使用Application context
@@ -388,12 +469,20 @@ public class LyricView extends Activity implements View.OnTouchListener {
     layoutParams.y = (int)(maxHeight * prevViewPercentageY);
 
     fixViewPosition();
+    applyStatusBarCutoutAvoidance();
 
     //设置透明
     layoutParams.format = PixelFormat.TRANSPARENT;
 
     //添加到window中
     windowManager.addView(textView, layoutParams);
+    if (isLeftStatusBarLayout()) {
+      textView.postDelayed(() -> {
+        if (windowManager == null || textView == null || layoutParams == null) return;
+        if (applyStatusBarCutoutAvoidance()) windowManager.updateViewLayout(textView, layoutParams);
+      }, 80);
+    }
+    if (isStatusBarMode) bringToFront(0);
   }
 
   public void setLyric(String text, ArrayList<String> extendedLyrics) {
@@ -401,6 +490,9 @@ public class LyricView extends Activity implements View.OnTouchListener {
     currentLyric = text;
     currentExtendedLyrics = extendedLyrics;
     if (textView == null) return;
+    if (isStatusBarMode) {
+      textView.setVisibility(text.length() == 0 && extendedLyrics.size() == 0 ? View.INVISIBLE : View.VISIBLE);
+    }
     if (extendedLyrics.size() > 0 && maxLineNum > 1 && !isSingleLine) {
       int num = maxLineNum - 1;
       StringBuilder textBuilder = new StringBuilder(text);
@@ -449,8 +541,36 @@ public class LyricView extends Activity implements View.OnTouchListener {
     prevViewPercentageX = x / 100f;
     prevViewPercentageY = y / 100f;
     fixViewPosition();
+    applyStatusBarCutoutAvoidance();
     windowManager.updateViewLayout(textView, layoutParams);
+    if (isStatusBarMode) bringToFront(500);
     sendPositionEvent(x, y);
+  }
+
+  public void bringToFront(long minIntervalMs) {
+    if (windowManager == null || textView == null || layoutParams == null) return;
+    if (isStatusBarMode) {
+      try {
+        windowManager.updateViewLayout(textView, layoutParams);
+      } catch (Exception updateError) {
+        Log.e("Lyric", updateError.getMessage());
+      }
+      return;
+    }
+    long now = System.currentTimeMillis();
+    if (minIntervalMs > 0 && now - lastBringToFrontTime < minIntervalMs) return;
+    lastBringToFrontTime = now;
+
+    try {
+      windowManager.removeViewImmediate(textView);
+      windowManager.addView(textView, layoutParams);
+    } catch (Exception e) {
+      try {
+        windowManager.updateViewLayout(textView, layoutParams);
+      } catch (Exception updateError) {
+        Log.e("Lyric", updateError.getMessage());
+      }
+    }
   }
 
   @Override
@@ -561,6 +681,8 @@ public class LyricView extends Activity implements View.OnTouchListener {
     this.isStatusBarMode = isStatusBarMode;
     if (windowManager == null || textView == null) return;
     applyWindowFlagsAndAlpha();
+    applyTextPadding();
+    setLayoutParamsHeight();
     applyBackground(!isLock || isStatusBarMode);
     windowManager.updateViewLayout(textView, layoutParams);
   }
@@ -609,7 +731,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
   public void setSingleLine(boolean isSingleLine) {
     this.isSingleLine = isSingleLine;
     if (textView == null) return;
-    windowManager.removeView(textView);
+    removeCurrentTextView();
     createTextView();
     textView.setWidth(layoutParams.width);
     textView.setHeight(layoutParams.height);
@@ -632,14 +754,14 @@ public class LyricView extends Activity implements View.OnTouchListener {
     this.textSize = size;
     if (windowManager == null || textView == null) return;
     textView.setTextSize(size);
+    applyTextPadding();
     setLayoutParamsHeight();
     windowManager.updateViewLayout(textView, layoutParams);
   }
 
   public void destroyView() {
     if (textView == null || windowManager == null) return;
-    windowManager.removeView(textView);
-    textView = null;
+    removeCurrentTextView();
     removeOrientationEvent();
   }
 

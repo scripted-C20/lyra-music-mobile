@@ -1,8 +1,11 @@
 import TrackPlayer, { Capability, Event, RepeatMode, State } from 'react-native-track-player'
 import BackgroundTimer from 'react-native-background-timer'
 import { playMusic as handlePlayMusic } from './playList'
+import { notificationIcon } from '@/config'
 import { existsFile, moveFile, privateStorageDirectoryPath, temporaryDirectoryPath } from '@/utils/fs'
 import { toast } from '@/utils/tools'
+import themeState from '@/store/theme/state'
+import { parseColorToRgba } from '@/utils/color'
 // import { PlayerMusicInfo } from '@/store/modules/player/playInfo'
 
 
@@ -248,47 +251,49 @@ export const onStateChange = async(listener: (state: PlayStatus) => void) => {
  */
 // export const playState = callback => TrackPlayer.addEventListener('playback-state', callback)
 
-export const updateOptions = async(options = {
-  // Whether the player should stop running when the app is closed on Android
-  // stopWithApp: true,
+type TrackPlayerUpdateOptions = Parameters<typeof TrackPlayer.updateOptions>[0]
 
-  // An array of media controls capabilities
-  // Can contain CAPABILITY_PLAY, CAPABILITY_PAUSE, CAPABILITY_STOP, CAPABILITY_SEEK_TO,
-  // CAPABILITY_SKIP_TO_NEXT, CAPABILITY_SKIP_TO_PREVIOUS, CAPABILITY_SET_RATING
+const colorToAndroidColor = (color: string | undefined) => {
+  const rgba = color ? parseColorToRgba(color) : null
+  if (!rgba) return 0xffe53935
+  return (0xff << 24) | (rgba.r << 16) | (rgba.g << 8) | rgba.b
+}
+
+const buildUpdateOptions = (): TrackPlayerUpdateOptions => ({
+  stopWithApp: false,
+  forwardJumpInterval: 15,
+  backwardJumpInterval: 15,
   capabilities: [
     Capability.Play,
+    Capability.PlayFromId,
+    Capability.PlayFromSearch,
     Capability.Pause,
     Capability.Stop,
     Capability.SeekTo,
     Capability.SkipToNext,
     Capability.SkipToPrevious,
+    Capability.JumpForward,
+    Capability.JumpBackward,
   ],
-
   notificationCapabilities: [
-    Capability.Play,
-    Capability.Pause,
-    Capability.Stop,
-    Capability.SkipToNext,
     Capability.SkipToPrevious,
-  ],
-
-  // // An array of capabilities that will show up when the notification is in the compact form on Android
-  compactCapabilities: [
     Capability.Play,
     Capability.Pause,
+    Capability.SkipToNext,
     Capability.Stop,
+  ],
+  compactCapabilities: [
+    Capability.SkipToPrevious,
+    Capability.Play,
+    Capability.Pause,
     Capability.SkipToNext,
   ],
+  icon: notificationIcon,
+  color: colorToAndroidColor(themeState.theme['c-primary']),
+})
 
-  // Icons for the notification on Android (if you don't like the default ones)
-  // playIcon: require('./play-icon.png'),
-  // pauseIcon: require('./pause-icon.png'),
-  // stopIcon: require('./stop-icon.png'),
-  // previousIcon: require('./previous-icon.png'),
-  // nextIcon: require('./next-icon.png'),
-  // icon: notificationIcon, // The notification icon
-}) => {
-  return TrackPlayer.updateOptions(options)
+export const updateOptions = async(options?: TrackPlayerUpdateOptions) => {
+  return TrackPlayer.updateOptions(options ?? buildUpdateOptions())
 }
 
 // export const setMaxCache = async size => {

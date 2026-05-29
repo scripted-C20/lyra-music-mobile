@@ -124,13 +124,13 @@ export default ({ componentId }: { componentId: string }) => {
     : Math.max(360, winH - statusBarH - HEADER_HEIGHT - 190)
 
   const recordSize = useMemo(() => {
-    const maxH = Math.max(176, contentHeight * 0.43)
-    return Math.min(winW * 0.58, maxH)
+    const maxH = Math.max(206, contentHeight * 0.49)
+    return Math.min(winW * 0.68, maxH)
   }, [contentHeight, winW])
 
   const stageSize = useMemo(() => ({
-    width: recordSize * 1.16,
-    height: recordSize * 1.06,
+    width: recordSize * 1.17,
+    height: recordSize * 1.08,
   }), [recordSize])
 
   const coverShellSize = recordSize * 0.43
@@ -140,12 +140,12 @@ export default ({ componentId }: { componentId: string }) => {
   const armLength = recordSize * 0.42
   const armThickness = Math.max(10, recordSize * 0.032)
   const ringScales = [0.96, 0.88, 0.8, 0.72, 0.64, 0.56]
-  const artworkOffsetY = Math.max(4, Math.min(14, contentHeight * 0.018))
+  const artworkOffsetY = Math.max(8, Math.min(20, contentHeight * 0.024))
   const miniLyricHeight = useMemo(() => {
-    const singerHeight = musicInfo.singer ? 34 : 0
-    const usedHeight = 12 + artworkOffsetY + stageSize.height + singerHeight + 18
-    const remainingHeight = Math.max(96, contentHeight - usedHeight - 8)
-    return Math.round(Math.max(96, Math.min(220, contentHeight * 0.34, remainingHeight)))
+    const singerHeight = musicInfo.singer ? 44 : 0
+    const usedHeight = 8 + artworkOffsetY + stageSize.height + singerHeight + 8
+    const remainingHeight = contentHeight - usedHeight
+    return Math.round(Math.max(104, Math.min(224, contentHeight * 0.34, remainingHeight + 22)))
   }, [artworkOffsetY, contentHeight, musicInfo.singer, stageSize.height])
   const handleLayout = ({ nativeEvent }: LayoutChangeEvent) => {
     const nextHeight = nativeEvent.layout.height
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 6,
   },
   artworkBlock: {
     alignItems: 'center',
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 14,
+    marginTop: 22,
     maxWidth: '80%',
   },
   singerDot: {
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    marginTop: 18,
+    marginTop: 8,
   },
   miniLyricWrap: {
     width: '100%',

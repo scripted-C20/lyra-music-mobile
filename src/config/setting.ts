@@ -5,6 +5,7 @@ import migrateSetting from './migrateSetting'
 import settingState from '@/store/setting/state'
 import { migrateMetaData, migrateListData } from './migrate'
 import { exitApp, tipDialog } from '@/utils/tools'
+import { normalizeColorAlphaToOpacity } from '@/utils/color'
 
 // 业务相关工具方法
 
@@ -114,6 +115,13 @@ const applyThemeDefaultMigration = (setting: LX.AppSetting) => {
 
   if (setting['desktopLyric.style.backgroundColor'] == 'rgba(0, 0, 0, 0.16)') {
     setting['desktopLyric.style.backgroundColor'] = 'rgba(0, 0, 0, 0)'
+    setting['desktopLyric.style.backgroundOpacity'] = 0
+  }
+
+  const desktopBackground = normalizeColorAlphaToOpacity(setting['desktopLyric.style.backgroundColor'])
+  if (desktopBackground) {
+    setting['desktopLyric.style.backgroundColor'] = desktopBackground.color
+    setting['desktopLyric.style.backgroundOpacity'] = desktopBackground.opacity
   }
 
   if (setting['statusBarLyric.style.lyricPlayedColor'] == 'rgba(7, 197, 86, 1)') {
@@ -122,6 +130,29 @@ const applyThemeDefaultMigration = (setting: LX.AppSetting) => {
 
   if (setting['statusBarLyric.style.lyricUnplayColor'] == 'rgba(7, 197, 86, 1)') {
     setting['statusBarLyric.style.lyricUnplayColor'] = 'theme'
+  }
+
+  const statusBarBackground = normalizeColorAlphaToOpacity(setting['statusBarLyric.style.backgroundColor'])
+  if (statusBarBackground) {
+    setting['statusBarLyric.style.backgroundColor'] = statusBarBackground.color
+    setting['statusBarLyric.style.backgroundOpacity'] = statusBarBackground.opacity
+  }
+
+  const isLegacyUnsafeStatusBarPreset =
+    setting['statusBarLyric.position.y'] < 1.2 &&
+    setting['statusBarLyric.width'] >= 58
+  if (isLegacyUnsafeStatusBarPreset) {
+    setting['statusBarLyric.position.y'] = 0.6
+    setting['statusBarLyric.width'] = 52
+    setting['statusBarLyric.position.x'] = 24
+  }
+
+  const isPreviousFloatingStatusBarDefault =
+    setting['statusBarLyric.width'] == 52 &&
+    setting['statusBarLyric.position.x'] == 24 &&
+    setting['statusBarLyric.position.y'] == 3.2
+  if (isPreviousFloatingStatusBarDefault) {
+    setting['statusBarLyric.position.y'] = 0.6
   }
 }
 

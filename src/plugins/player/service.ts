@@ -2,11 +2,12 @@
 import TrackPlayer, { State as TPState, Event as TPEvent } from 'react-native-track-player'
 // import { store } from '@/store'
 // import { action as playerAction, STATUS } from '@/store/modules/player'
-import { isTempId, isEmpty } from './utils'
+import { getPosition, isTempId, isEmpty, setCurrentTime } from './utils'
 // import { play as lrcPlay, pause as lrcPause } from '@/core/lyric'
 import { exitApp } from '@/core/common'
 import { getCurrentTrackId } from './playList'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
+import playerState from '@/store/player/state'
 
 let isInitialized = false
 
@@ -53,18 +54,40 @@ const registerPlaybackService = async() => {
     void handleExitApp('Remote Stop')
   })
 
+  TrackPlayer.addEventListener(TPEvent.RemoteJumpForward, async({ interval }) => {
+    const position = await getPosition()
+    const jumpInterval = Number(interval)
+    if (!Number.isFinite(jumpInterval)) return
+    const nextPosition = Math.min(
+      playerState.progress.maxPlayTime || position + jumpInterval,
+      position + jumpInterval,
+    )
+    global.app_event.setProgress(nextPosition)
+  })
+
+  TrackPlayer.addEventListener(TPEvent.RemoteJumpBackward, async({ interval }) => {
+    const position = await getPosition()
+    const jumpInterval = Number(interval)
+    if (!Number.isFinite(jumpInterval)) return
+    global.app_event.setProgress(Math.max(0, position - jumpInterval))
+  })
+
+  TrackPlayer.addEventListener(TPEvent.RemotePlayId, ({ id }) => {
+    if (!id) return
+    if (playerState.musicInfo.id == id) play()
+  })
+
+  TrackPlayer.addEventListener(TPEvent.RemotePlaySearch, () => {
+    play()
+  })
+
   // TrackPlayer.addEventListener(TPEvent.RemoteDuck, async({ permanent, paused, ducking }) => {
   //   console.log('remote-duck')
-  //   if (paused) {
-  //     store.dispatch(playerAction.setStatus({ status: STATUS.pause, text: '已暂停' }))
-  //     lrcPause()
-  //   } else {
-  //     store.dispatch(playerAction.setStatus({ status: STATUS.playing, text: '播放中...' }))
-  //     TrackPlayer.getPosition().then(position => {
-  //       lrcPlay(position * 1000)
-  //     })
-  //   }
   // })
+
+  TrackPlayer.addEventListener(TPEvent.RemoteDuck, ({ paused }) => {
+    if (paused && playerState.isPlay) void pause()
+  })
 
   TrackPlayer.addEventListener(TPEvent.PlaybackError, async(err: any) => {
     console.log('playback-error', err)
@@ -73,6 +96,7 @@ const registerPlaybackService = async() => {
   })
 
   TrackPlayer.addEventListener(TPEvent.RemoteSeek, async({ position }) => {
+    await setCurrentTime(position as number)
     global.app_event.setProgress(position as number)
   })
 

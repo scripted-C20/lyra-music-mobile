@@ -10,6 +10,7 @@ import TextSize from './TextSize'
 import ViewWidth from './ViewWidth'
 import MaxLineNum from './MaxLineNum'
 import TextOpacity from './TextOpacity'
+import BackgroundOpacity from './BackgroundOpacity'
 import TextPositionX from './TextPositionX'
 import TextPositionY from './TextPositionY'
 import { useI18n } from '@/lang'
@@ -19,6 +20,7 @@ import Button from '../../components/Button'
 import { updateSetting } from '@/core/common'
 import {
   setDesktopLyricAlpha,
+  setDesktopLyricBackgroundOpacity,
   setDesktopLyricBackgroundColor,
   setDesktopLyricColor,
   setDesktopLyricMaxLineNum,
@@ -46,6 +48,7 @@ export default memo(() => {
       setDesktopLyricTextPosition('left', 'top'),
       setDesktopLyricColor('theme', 'theme', 'rgba(0, 0, 0, 0.6)'),
       setDesktopLyricBackgroundColor('rgba(0, 0, 0, 0)'),
+      setDesktopLyricBackgroundOpacity(0),
     ]).then(() => {
       updateSetting({
         'desktopLyric.style.fontSize': 180,
@@ -61,6 +64,7 @@ export default memo(() => {
         'desktopLyric.style.lyricPlayedColor': 'theme',
         'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.6)',
         'desktopLyric.style.backgroundColor': 'rgba(0, 0, 0, 0)',
+        'desktopLyric.style.backgroundOpacity': 0,
       })
       toast(t('setting_lyric_desktop_reset_success_tip'))
     })
@@ -76,6 +80,7 @@ export default memo(() => {
         <Theme />
         <TextSize />
         <TextOpacity />
+        <BackgroundOpacity />
       </SubTitle>
       <SubTitle title={t('setting_group_layout')}>
         <ViewWidth />

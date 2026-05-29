@@ -25,9 +25,9 @@ export default memo(() => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: PAGE_SIDE_PADDING,
-    paddingBottom: 14,
-    paddingTop: 4,
+    paddingBottom: 12,
+    paddingTop: 0,
     justifyContent: 'flex-start',
-    gap: 10,
+    gap: 8,
   },
 })

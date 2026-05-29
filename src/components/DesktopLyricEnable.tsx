@@ -5,7 +5,7 @@ import ConfirmAlert, { type ConfirmAlertType } from '@/components/common/Confirm
 import { toast } from '@/utils/tools'
 
 import { useI18n } from '@/lang'
-import { checkDesktopLyricOverlayPermission, hideDesktopLyric, hideStatusBarLyric, openDesktopLyricOverlayPermissionActivity, showDesktopLyric, showStatusBarLyric } from '@/core/desktopLyric'
+import { checkDesktopLyricOverlayPermission, checkStatusBarLyricPermission, hideDesktopLyric, hideStatusBarLyric, openDesktopLyricOverlayPermissionActivity, showDesktopLyric, showStatusBarLyric } from '@/core/desktopLyric'
 import { updateSetting } from '@/core/common'
 
 export interface DesktopLyricEnableType {
@@ -36,7 +36,7 @@ export default forwardRef<DesktopLyricEnableType, { mode?: 'desktop' | 'statusBa
   const handleChangeEnableDesktopLyric = async(isEnable: boolean) => {
     if (isEnable) {
       try {
-        await checkDesktopLyricOverlayPermission()
+        await (mode == 'statusBar' ? checkStatusBarLyricPermission() : checkDesktopLyricOverlayPermission())
         if (mode == 'statusBar') {
           await hideStatusBarLyric()
           await showStatusBarLyric()

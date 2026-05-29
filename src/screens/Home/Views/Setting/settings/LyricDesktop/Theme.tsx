@@ -25,10 +25,9 @@ type Theme = typeof themes[number]
 
 const backgroundThemes = [
   'rgba(0, 0, 0, 0)',
-  'rgba(0, 0, 0, 0.16)',
-  'rgba(0, 0, 0, 0.42)',
-  'rgba(255, 255, 255, 0.72)',
-  'rgba(255, 59, 48, 0.18)',
+  'rgba(0, 0, 0, 1)',
+  'rgba(255, 255, 255, 1)',
+  'rgba(255, 59, 48, 1)',
 ] as const
 
 const ThemeItem = ({ color, active, change }: {
@@ -70,6 +69,7 @@ export default memo(() => {
   const t = useI18n()
   const textColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
   const backgroundColor = useSettingValue('desktopLyric.style.backgroundColor')
+  const backgroundOpacity = useSettingValue('desktopLyric.style.backgroundOpacity')
 
   const setThemeDesktopLyric = (color: Theme) => {
     // const shadowColor = 'rgba(0,0,0,0.6)'
@@ -83,8 +83,14 @@ export default memo(() => {
   }
 
   const setBackgroundDesktopLyric = (color: string) => {
-    void setDesktopLyricBackgroundColor(color).then(() => {
-      updateSetting({ 'desktopLyric.style.backgroundColor': color })
+    const nextOpacity = color == 'rgba(0, 0, 0, 0)'
+      ? 0
+      : backgroundOpacity <= 0 ? 32 : backgroundOpacity
+    void setDesktopLyricBackgroundColor(color, nextOpacity).then(() => {
+      updateSetting({
+        'desktopLyric.style.backgroundColor': color,
+        'desktopLyric.style.backgroundOpacity': nextOpacity,
+      })
     })
   }
 

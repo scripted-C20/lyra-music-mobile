@@ -2,7 +2,7 @@
 
 Lyra Music Mobile 是一个基于 React Native 的移动端音乐播放器项目。本仓库基于 LX Music Mobile 进行二次修改，主要面向 Android 端使用与学习交流。
 
-项目地址：<https://github.com/scripted-C20/lyra-music-mobile>
+项目地址：<https://github.com/scripted-C20/-lyra-music-mobile>
 
 ## 项目说明
 
@@ -18,7 +18,7 @@ Lyra Music Mobile 是一个基于 React Native 的移动端音乐播放器项目
 
 - 原始项目：<https://github.com/lyswhut/lx-music-mobile>
 - 桌面端参考项目：<https://github.com/lyswhut/lx-music-desktop>
-- 本二改仓库：<https://github.com/scripted-C20/lyra-music-mobile>
+- 本二改仓库：<https://github.com/scripted-C20/-lyra-music-mobile>
 
 本项目本身不提供、不存储、不分发任何音乐音频文件。实际播放链接由用户选择的源返回，链接的可用性、准确性与合法性由对应源和使用者自行负责。
 
@@ -33,6 +33,9 @@ Lyra Music Mobile 是一个基于 React Native 的移动端音乐播放器项目
 - 自定义源设置页单独成区，加入本地源、订阅源、导入、删除、测试、测试池与可停止测试等流程。
 - 强化歌单链接解析与添加歌单交互，尽量对齐客户端级体验。
 - 将桌面歌词与状态栏/胶囊歌词拆成两套设置与悬浮窗实例，支持独立开关、颜色、背景、位置、尺寸和预设微调。
+- 桌面歌词在本 App 前台时自动隐藏，状态栏歌词可同时存在并支持 Flyme 状态栏歌词协议优先、普通悬浮窗兜底。
+- 补齐 Android 标准 MediaSession / 媒体通知 / 耳机按键兼容，保留安全的播放、暂停、上一首、下一首、进度跳转等能力。
+- 不向系统暴露 TrackPlayer 内部队列级跳转，避免外部“跳到队列项”破坏 App 真实播放队列闭环。
 - 自定义源测试改为移动端内置闭环：本地源与订阅源内直接测试，使用 5 worker 测试池、2 路源请求并发、可停止测试和导入去重。
 - 添加歌单弹窗增加平台识别提示，可根据网易云、QQ、酷狗、酷我、咪咕等链接自动选择对应平台。
 - 补齐基础设置、列表设置、主题色、歌词设置等可见设置项的落库与生效链路。

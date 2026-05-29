@@ -182,6 +182,10 @@ public final class LyricSwitchView extends TextSwitcher {
     for (TextView v : viewArray) v.setTypeface(typeface);
   }
 
+  public void setPadding(int left, int top, int right, int bottom) {
+    for (TextView v : viewArray) v.setPadding(left, top, right, bottom);
+  }
+
   public void setSingleLine(boolean bool) {
     for (TextView v : viewArray) v.setSingleLine(bool);
   }

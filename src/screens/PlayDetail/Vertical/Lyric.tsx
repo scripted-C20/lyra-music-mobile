@@ -138,15 +138,17 @@ const DEFAULT_LYRIC_HEIGHT = 360
 
 const getCenterPosition = (height: number) => {
   if (!Number.isFinite(height) || height <= 0) return 0.34
-  if (height >= 620) return 0.42
-  if (height >= 500) return 0.39
-  if (height >= 380) return 0.36
-  return 0.32
+  if (height >= 620) return 0.46
+  if (height >= 500) return 0.43
+  if (height >= 380) return 0.4
+  return 0.36
 }
 
-const getSpaceHeight = (height: number) => {
+const getSpaceHeight = (height: number, lineCount: number) => {
   const safeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_LYRIC_HEIGHT
-  return Math.max(42, Math.min(180, safeHeight * 0.32))
+  const compactMax = lineCount <= 5 ? 42 : lineCount <= 10 ? 68 : 96
+  const compactRatio = lineCount <= 5 ? 0.09 : lineCount <= 10 ? 0.14 : 0.18
+  return Math.max(14, Math.min(compactMax, safeHeight * compactRatio))
 }
 
 export default () => {
@@ -348,9 +350,6 @@ export default () => {
   }
   const getkey: FlatListType['keyExtractor'] = (item, index) => `${index}${item.text}`
 
-  const spaceComponent = useMemo(() => (
-    <View style={{ height: getSpaceHeight(containerHeight) }} onLayout={handleSpaceLayout}></View>
-  ), [containerHeight, handleSpaceLayout])
   const emptyComponent = useMemo(() => (
     <View style={styles.empty}>
       <View style={[
@@ -367,6 +366,10 @@ export default () => {
     </View>
   ), [ds])
   const hasLyric = useMemo(() => lyricLines.some(hasVisibleLine), [lyricLines])
+  const visibleLineCount = useMemo(() => lyricLines.filter(hasVisibleLine).length, [lyricLines])
+  const spaceComponent = useMemo(() => (
+    <View style={{ height: getSpaceHeight(containerHeight, visibleLineCount) }} onLayout={handleSpaceLayout}></View>
+  ), [containerHeight, handleSpaceLayout, visibleLineCount])
 
   return (
     <>
@@ -401,7 +404,7 @@ const styles = createStyle({
     paddingRight: 26,
   },
   content: {
-    paddingBottom: 14,
+    paddingBottom: 0,
   },
   emptyContent: {
     flexGrow: 1,

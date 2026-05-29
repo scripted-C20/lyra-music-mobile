@@ -128,6 +128,10 @@ export const showStatusBarLyricView = async(options: LyricViewOptions): Promise<
   }))
 }
 
+export const isFlymeStatusBarLyricSupported = async(): Promise<boolean> => {
+  return LyricModule.isFlymeStatusBarLyricSupported()
+}
+
 /**
  * hide lyric
  */

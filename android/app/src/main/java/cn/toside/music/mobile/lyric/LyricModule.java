@@ -6,6 +6,7 @@ import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -13,20 +14,25 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 
-public class LyricModule extends ReactContextBaseJavaModule {
+public class LyricModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
   private final ReactApplicationContext reactContext;
   Lyric lyric;
   Lyric statusBarLyric;
+  FlymeStatusBarLyric flymeStatusBarLyric;
   // final Map<String, Object> constants = new HashMap<>();
 
   boolean isShowTranslation = false;
   boolean isShowRoma = false;
   float playbackRate = 1;
+  boolean isAppInForeground = true;
 
   private int listenerCount = 0;
 
   private Lyric getLyric() {
-    if (lyric == null) lyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate, "desktop");
+    if (lyric == null) {
+      lyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate, "desktop");
+      lyric.setAppInForeground(isAppInForeground);
+    }
     return lyric;
   }
 
@@ -35,9 +41,15 @@ public class LyricModule extends ReactContextBaseJavaModule {
     return statusBarLyric;
   }
 
+  private FlymeStatusBarLyric getFlymeStatusBarLyric() {
+    if (flymeStatusBarLyric == null) flymeStatusBarLyric = new FlymeStatusBarLyric(reactContext);
+    return flymeStatusBarLyric;
+  }
+
   LyricModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
+    reactContext.addLifecycleEventListener(this);
 
     // constants.put("THEME_GREEN", "#07c556");
     // constants.put("THEME_YELLOW", "#fffa12");
@@ -79,11 +91,27 @@ public class LyricModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void showDesktopLyric(ReadableMap data, Promise promise) {
     getLyric().showDesktopLyric(Arguments.toBundle(data), promise);
+    if (statusBarLyric != null) statusBarLyric.bringToFront(0);
   }
 
   @ReactMethod
   public void showStatusBarLyric(ReadableMap data, Promise promise) {
-    getStatusBarLyric().showDesktopLyric(Arguments.toBundle(data), promise);
+    Lyric lyric = getStatusBarLyric();
+    FlymeStatusBarLyric flymeLyric = getFlymeStatusBarLyric();
+    if (flymeLyric.isSupported()) {
+      lyric.setCurrentLyricHandler(flymeLyric::setLyric);
+      flymeLyric.show();
+      lyric.showNativeStatusBarLyric(promise);
+    } else {
+      lyric.setCurrentLyricHandler(null);
+      lyric.showDesktopLyric(Arguments.toBundle(data), promise);
+      lyric.bringToFront(0);
+    }
+  }
+
+  @ReactMethod
+  public void isFlymeStatusBarLyricSupported(Promise promise) {
+    promise.resolve(getFlymeStatusBarLyric().isSupported());
   }
 
   @ReactMethod
@@ -95,6 +123,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void hideStatusBarLyric(Promise promise) {
     if (statusBarLyric != null) statusBarLyric.hideDesktopLyric();
+    if (flymeStatusBarLyric != null) flymeStatusBarLyric.hide();
     promise.resolve(null);
   }
 
@@ -143,6 +172,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
     Log.d("Lyric", "play lyric: " + time);
     if (lyric != null) lyric.play(time);
     if (statusBarLyric != null) statusBarLyric.play(time);
+    if (flymeStatusBarLyric != null) flymeStatusBarLyric.setPlaying(true);
     promise.resolve(null);
   }
 
@@ -151,6 +181,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
     Log.d("Lyric", "play pause");
     if (lyric != null) lyric.pauseLyric();
     if (statusBarLyric != null) statusBarLyric.pauseLyric();
+    if (flymeStatusBarLyric != null) flymeStatusBarLyric.setPlaying(false);
     promise.resolve(null);
   }
 
@@ -276,7 +307,10 @@ public class LyricModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setStatusBarPosition(double x, double y, Promise promise) {
-    if (statusBarLyric != null) statusBarLyric.setPosition((float) x, (float) y);
+    if (statusBarLyric != null) {
+      statusBarLyric.setPosition((float) x, (float) y);
+      statusBarLyric.bringToFront(500);
+    }
     promise.resolve(null);
   }
 
@@ -307,6 +341,24 @@ public class LyricModule extends ReactContextBaseJavaModule {
       reactContext.startActivityForResult(intent, 1, null);
     }
     promise.resolve(null);
+  }
+
+  @Override
+  public void onHostResume() {
+    isAppInForeground = true;
+    if (lyric != null) lyric.setAppInForeground(true);
+  }
+
+  @Override
+  public void onHostPause() {
+    isAppInForeground = false;
+    if (lyric != null) lyric.setAppInForeground(false);
+  }
+
+  @Override
+  public void onHostDestroy() {
+    isAppInForeground = false;
+    if (lyric != null) lyric.setAppInForeground(false);
   }
 
 }

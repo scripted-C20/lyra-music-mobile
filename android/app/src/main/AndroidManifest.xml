@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:targetApi="33" />
 
     <application
       android:name=".MainApplication"
@@ -21,6 +25,26 @@
       android:allowBackup="true"
       android:theme="@style/AppTheme"
       tools:targetApi="n">
+      <service
+        android:name="com.guichaguri.trackplayer.service.MusicService"
+        android:enabled="true"
+        android:exported="true"
+        android:foregroundServiceType="mediaPlayback"
+        tools:node="merge">
+        <intent-filter>
+          <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent-filter>
+      </service>
+
+      <receiver
+        android:name="androidx.media.session.MediaButtonReceiver"
+        android:exported="true"
+        tools:node="merge">
+        <intent-filter>
+          <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent-filter>
+      </receiver>
+
       <activity
         android:name=".MainActivity"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

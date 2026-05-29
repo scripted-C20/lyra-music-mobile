@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Objects;
 
 public class Lyric extends LyricPlayer {
+  interface CurrentLyricHandler {
+    void onCurrentLyric(String lyric, ArrayList<String> extendedLyrics);
+  }
+
   LyricView lyricView = null;
   LyricEvent lyricEvent = null;
   ReactApplicationContext reactAppContext;
@@ -35,6 +39,9 @@ public class Lyric extends LyricPlayer {
   String lyricText = "";
   String translationText = "";
   String romaLyricText = "";
+  CurrentLyricHandler currentLyricHandler = null;
+  Bundle lastShowOptions = null;
+  boolean isAppInForeground = false;
 
   Lyric(ReactApplicationContext reactContext, boolean isShowTranslation, boolean isShowRoma, float playbackRate, String mode) {
     this.reactAppContext = reactContext;
@@ -131,8 +138,10 @@ public class Lyric extends LyricPlayer {
   }
 
   private void setCurrentLyric(String lyric, ArrayList<String> extendedLyrics) {
+    if (currentLyricHandler != null) currentLyricHandler.onCurrentLyric(lyric, extendedLyrics);
     if (isShowLyricView && !isScreenOff && lyricView != null) {
       lyricView.setLyric(lyric, extendedLyrics);
+      if ("statusBar".equals(mode)) lyricView.bringToFront(5000);
     }
     if (isSendLyricTextEvent) {
       WritableMap params = Arguments.createMap();
@@ -165,33 +174,56 @@ public class Lyric extends LyricPlayer {
   }
 
   public void showDesktopLyric(Bundle options, Promise promise) {
-    if (isShowLyricView) {
+    if (lyricEvent == null) lyricEvent = new LyricEvent(reactAppContext);
+    isShowLyricView = true;
+    isRunPlayer = true;
+    lastShowOptions = options == null ? new Bundle() : new Bundle(options);
+    if (shouldHideInOwnApp()) {
+      destroyLyricViewOnly();
+      refreshLyric();
+      handleGetCurrentLyric(lastLine);
       promise.resolve(null);
       return;
     }
-    if (lyricEvent == null) lyricEvent = new LyricEvent(reactAppContext);
-    isShowLyricView = true;
     if (lyricView == null) lyricView = new LyricView(reactAppContext, lyricEvent, mode);
     try {
-      lyricView.showLyricView(options);
+      lyricView.showLyricView(lastShowOptions);
     } catch (Exception e) {
       isShowLyricView = false;
       promise.reject(e);
       Log.e("Lyric", e.getMessage());
       return;
     }
+    refreshLyric();
+    handleGetCurrentLyric(lastLine);
+    promise.resolve(null);
+  }
+
+  public void showNativeStatusBarLyric(Promise promise) {
+    if (lyricEvent == null) lyricEvent = new LyricEvent(reactAppContext);
+    isShowLyricView = true;
     isRunPlayer = true;
+    refreshLyric();
+    handleGetCurrentLyric(lastLine);
     promise.resolve(null);
   }
 
   public void hideDesktopLyric() {
     if (!isShowLyricView) return;
     isShowLyricView = false;
+    lastShowOptions = null;
     pausePlayer();
-    if (lyricView != null) {
-      lyricView.destroy();
-      lyricView = null;
-    }
+    destroyLyricViewOnly();
+  }
+
+  private boolean shouldHideInOwnApp() {
+    return "desktop".equals(mode) && isAppInForeground;
+  }
+
+  private void destroyLyricViewOnly() {
+    if (lyricView == null) return;
+    lyricView.destroy();
+    lyricView = null;
   }
 
   private void refreshLyric() {
@@ -227,8 +259,8 @@ public class Lyric extends LyricPlayer {
 
   public void pauseLyric() {
     pause();
-    if (!isRunPlayer) return;
-    handleGetCurrentLyric(-1);
+    if (!isRunPlayer || !isShowLyricView) return;
+    if (lastLine >= 0) handleGetCurrentLyric(lastLine);
   }
 
   public void lockLyric() {
@@ -304,5 +336,38 @@ public class Lyric extends LyricPlayer {
   public void setLyricTextPosition(String positionX, String positionY) {
     if (lyricView == null) return;
     lyricView.setLyricTextPosition(positionX, positionY);
+  }
+
+  public void setCurrentLyricHandler(CurrentLyricHandler handler) {
+    currentLyricHandler = handler;
+  }
+
+  public void bringToFront(long minIntervalMs) {
+    if (!isShowLyricView || lyricView == null) return;
+    lyricView.bringToFront(minIntervalMs);
+  }
+
+  public void setAppInForeground(boolean isForeground) {
+    if (!"desktop".equals(mode)) return;
+    if (isAppInForeground == isForeground) return;
+    isAppInForeground = isForeground;
+    if (!isShowLyricView) return;
+
+    if (isForeground) {
+      destroyLyricViewOnly();
+      return;
+    }
+
+    if (lyricView != null || lastShowOptions == null) return;
+    if (lyricEvent == null) lyricEvent = new LyricEvent(reactAppContext);
+    lyricView = new LyricView(reactAppContext, lyricEvent, mode);
+    try {
+      lyricView.showLyricView(lastShowOptions);
+      refreshLyric();
+      handleGetCurrentLyric(lastLine);
+    } catch (Exception e) {
+      Log.e("Lyric", e.getMessage());
+      destroyLyricViewOnly();
+    }
   }
 }
