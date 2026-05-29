@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useRef, useCallback } from 'react'
+import { memo, useMemo, useEffect, useRef, useCallback, useState } from 'react'
 import { View, FlatList, type FlatListProps, type LayoutChangeEvent, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native'
 // import { useLayout } from '@/utils/hooks'
 import { type Line, useLrcPlay, useLrcSet } from '@/plugins/lyric'
@@ -134,6 +134,20 @@ const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
     nextProps.activeLine != nextProps.lineNum
 })
 const wait = async() => new Promise(resolve => setTimeout(resolve, 100))
+const DEFAULT_LYRIC_HEIGHT = 360
+
+const getCenterPosition = (height: number) => {
+  if (!Number.isFinite(height) || height <= 0) return 0.34
+  if (height >= 620) return 0.42
+  if (height >= 500) return 0.39
+  if (height >= 380) return 0.36
+  return 0.32
+}
+
+const getSpaceHeight = (height: number) => {
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_LYRIC_HEIGHT
+  return Math.max(42, Math.min(180, safeHeight * 0.32))
+}
 
 export default () => {
   const lyricLines = useLrcSet()
@@ -150,6 +164,7 @@ export default () => {
   const listLayoutInfoRef = useRef<{ spaceHeight: number, lineHeights: number[] }>({ spaceHeight: 0, lineHeights: [] })
   const scrollCancelRef = useRef<(() => void) | null>(null)
   const isShowLyricProgressSetting = useSettingValue('playDetail.isShowLyricProgressSetting')
+  const [containerHeight, setContainerHeight] = useState(DEFAULT_LYRIC_HEIGHT)
   // useLock()
   // const [imgUrl, setImgUrl] = useState(null)
   // const theme = useGetter('common', 'theme')
@@ -174,7 +189,8 @@ export default () => {
         }
         offset += (listLayoutInfoRef.current.lineHeights[line] ?? 0) / 2
         try {
-          scrollCancelRef.current = scrollTo(flatListRef.current, scrollInfoRef.current, offset - scrollInfoRef.current.layoutMeasurement.height * 0.36, 600, () => {
+          const viewPosition = getCenterPosition(scrollInfoRef.current.layoutMeasurement.height)
+          scrollCancelRef.current = scrollTo(flatListRef.current, scrollInfoRef.current, offset - scrollInfoRef.current.layoutMeasurement.height * viewPosition, 600, () => {
             scrollCancelRef.current = null
           })
         } catch {}
@@ -187,7 +203,7 @@ export default () => {
           flatListRef.current.scrollToIndex({
             index,
             animated: true,
-            viewPosition: 0.36,
+            viewPosition: getCenterPosition(containerHeight),
           })
         } catch {}
       }
@@ -314,6 +330,11 @@ export default () => {
     listLayoutInfoRef.current.spaceHeight = nativeEvent.layout.height
     playLineRef.current?.updateLayoutInfo(listLayoutInfoRef.current)
   }, [])
+  const handleContainerLayout = useCallback(({ nativeEvent }: LayoutChangeEvent) => {
+    const nextHeight = nativeEvent.layout.height
+    if (!Number.isFinite(nextHeight) || nextHeight <= 0) return
+    setContainerHeight(prevHeight => Math.abs(prevHeight - nextHeight) > 2 ? nextHeight : prevHeight)
+  }, [])
 
   const handlePlayLine = useCallback((time: number) => {
     playLineRef.current?.setVisible(false)
@@ -328,8 +349,8 @@ export default () => {
   const getkey: FlatListType['keyExtractor'] = (item, index) => `${index}${item.text}`
 
   const spaceComponent = useMemo(() => (
-    <View style={styles.space} onLayout={handleSpaceLayout}></View>
-  ), [handleSpaceLayout])
+    <View style={{ height: getSpaceHeight(containerHeight) }} onLayout={handleSpaceLayout}></View>
+  ), [containerHeight, handleSpaceLayout])
   const emptyComponent = useMemo(() => (
     <View style={styles.empty}>
       <View style={[
@@ -354,6 +375,7 @@ export default () => {
         renderItem={renderItem}
         keyExtractor={getkey}
         style={styles.container}
+        onLayout={handleContainerLayout}
         contentContainerStyle={hasLyric ? styles.content : styles.emptyContent}
         ref={flatListRef}
         showsVerticalScrollIndicator={false}
@@ -412,7 +434,7 @@ const styles = createStyle({
     textAlign: 'center',
   },
   space: {
-    paddingTop: 48,
+    height: 116,
   },
   line: {
     paddingTop: 13,

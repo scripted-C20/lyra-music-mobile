@@ -1,6 +1,6 @@
 import { init as initLyricPlayer, toggleTranslation, toggleRoma, play, pause, stop, setLyric, setPlaybackRate } from '@/core/lyric'
 import { updateSetting } from '@/core/common'
-import { onDesktopLyricPositionChange, showDesktopLyric, onLyricLinePlay, showRemoteLyric } from '@/core/desktopLyric'
+import { onDesktopLyricPositionChange, showDesktopLyric, showStatusBarLyric, onLyricLinePlay, showRemoteLyric } from '@/core/desktopLyric'
 import playerState from '@/store/player/state'
 import { updateNowPlayingTitles } from '@/plugins/player/utils'
 import { setLastLyric } from '@/core/player/playInfo'
@@ -35,16 +35,28 @@ export default async(setting: LX.AppSetting) => {
       updateSetting({ 'desktopLyric.enable': false })
     })
   }
+  if (setting['statusBarLyric.enable']) {
+    showStatusBarLyric().catch(() => {
+      updateSetting({ 'statusBarLyric.enable': false })
+    })
+  }
   if (setting['player.isShowBluetoothLyric']) {
     showRemoteLyric(true).catch(() => {
       updateSetting({ 'player.isShowBluetoothLyric': false })
     })
   }
   onDesktopLyricPositionChange(position => {
-    updateSetting({
-      'desktopLyric.position.x': position.x,
-      'desktopLyric.position.y': position.y,
-    })
+    if (position.mode == 'statusBar') {
+      updateSetting({
+        'statusBarLyric.position.x': position.x,
+        'statusBarLyric.position.y': position.y,
+      })
+    } else if (position.mode == 'desktop' || !position.mode) {
+      updateSetting({
+        'desktopLyric.position.x': position.x,
+        'desktopLyric.position.y': position.y,
+      })
+    }
   })
   onLyricLinePlay(({ text, extendedLyrics }) => {
     if (!text && !playerState.isPlay) {

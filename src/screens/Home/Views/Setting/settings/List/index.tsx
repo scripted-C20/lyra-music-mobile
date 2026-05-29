@@ -5,6 +5,8 @@ import AddMusicLocationType from './AddMusicLocationType'
 import IsClickPlayList from './IsClickPlayList'
 import IsShowAlbumName from './IsShowAlbumName'
 import IsShowInterval from './IsShowInterval'
+import IsShowSource from './IsShowSource'
+import IsSaveScrollLocation from './IsSaveScrollLocation'
 
 import { useI18n } from '@/lang'
 import SubTitle from '../../components/SubTitle'
@@ -18,10 +20,12 @@ export default memo(() => {
         <IsClickPlayList />
       </SubTitle>
       <SubTitle title={t('setting_group_display')}>
+        <IsShowSource />
         <IsShowAlbumName />
         <IsShowInterval />
       </SubTitle>
       <SubTitle title={t('setting_group_manage')}>
+        <IsSaveScrollLocation />
         <AddMusicLocationType />
       </SubTitle>
     </Section>

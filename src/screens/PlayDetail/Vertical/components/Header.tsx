@@ -14,6 +14,7 @@ import Btn from './Btn'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 export const PAGE_SIDE_PADDING = 18
+const TOP_SAFE_GAP = 8
 
 const Title = () => {
   const ds = useDS()
@@ -36,22 +37,23 @@ export default memo(() => {
 
   return (
     <View
-      style={[styles.wrap, { paddingTop: statusBarHeight + 18 }]}
+      style={[styles.wrap, { height: statusBarHeight + HEADER_HEIGHT + 14 }]}
       nativeID={NAV_SHEAR_NATIVE_IDS.playDetail_header}
     >
       <StatusBar />
-      <View style={styles.row}>
+      <View style={[styles.row, { paddingTop: statusBarHeight + TOP_SAFE_GAP }]}>
         <View style={styles.sideSlot}>
           <Btn icon="chevron-left" onPress={back} />
         </View>
 
-        <View style={styles.titleWrap}>
-          <Title />
-        </View>
+        <View style={styles.centerSpacer} />
 
         <View style={styles.sideSlot}>
           <Btn icon="slider" onPress={showSetting} />
         </View>
+      </View>
+      <View pointerEvents="none" style={[styles.titleWrap, { top: statusBarHeight + TOP_SAFE_GAP }]}>
+        <Title />
       </View>
       <SettingPopup ref={popupRef} direction="vertical" />
     </View>
@@ -61,19 +63,33 @@ export default memo(() => {
 const styles = StyleSheet.create({
   wrap: {
     height: HEADER_HEIGHT + 26,
+    position: 'relative',
   },
   row: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: PAGE_SIDE_PADDING,
   },
   sideSlot: {
     width: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
   },
-  titleWrap: { flex: 1, paddingHorizontal: 12, alignItems: 'center' },
+  centerSpacer: {
+    flex: 1,
+  },
+  titleWrap: {
+    position: 'absolute',
+    left: PAGE_SIDE_PADDING + 48,
+    right: PAGE_SIDE_PADDING + 48,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
   titleBlock: {
     alignItems: 'center',
     justifyContent: 'center',

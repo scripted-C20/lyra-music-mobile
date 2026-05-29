@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,11 +30,14 @@ import java.util.regex.Pattern;
 import cn.toside.music.mobile.R;
 
 public class LyricView extends Activity implements View.OnTouchListener {
+  private static final float TOUCH_THROUGH_WINDOW_ALPHA = 0.72f;
+
   LyricSwitchView textView = null;
   WindowManager windowManager = null;
   WindowManager.LayoutParams layoutParams = null;
   final private ReactApplicationContext reactContext;
   final private LyricEvent lyricEvent;
+  final private String mode;
 
   // private int winWidth = 0;
 
@@ -52,10 +56,12 @@ public class LyricView extends Activity implements View.OnTouchListener {
 
   private boolean isLock = false;
   private boolean isSingleLine = false;
+  private boolean isStatusBarMode = false;
   private boolean isShowToggleAnima = false;
   private String unplayColor = "rgba(255, 255, 255, 1)";
   private String playedColor = "rgba(7, 197, 86, 1)";
   private String shadowColor = "rgba(0, 0, 0, 0.15)";
+  private String backgroundColor = "rgba(0, 0, 0, 0)";
   // private String lastText = "LX Music ^-^";
   private String textX = "LEFT";
   private String textY = "TOP";
@@ -75,9 +81,10 @@ public class LyricView extends Activity implements View.OnTouchListener {
   final Handler fixViewPositionHandler;
   final Runnable fixViewPositionRunnable = this::updateViewPosition;
 
-  LyricView(ReactApplicationContext reactContext, LyricEvent lyricEvent) {
+  LyricView(ReactApplicationContext reactContext, LyricEvent lyricEvent, String mode) {
     this.reactContext = reactContext;
     this.lyricEvent = lyricEvent;
+    this.mode = mode;
     fixViewPositionHandler = new Handler();
   }
 
@@ -110,17 +117,29 @@ public class LyricView extends Activity implements View.OnTouchListener {
     // orientationEventListener = null;
   }
 
+  private boolean isTouchThroughMode() {
+    return isLock || isStatusBarMode;
+  }
+
   private int getLayoutParamsFlags() {
     int flag = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
       WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
       WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
       WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
 
-    if (isLock) {
+    if (isTouchThroughMode()) {
       flag = flag | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
     }
 
     return flag;
+  }
+
+  private void applyWindowFlagsAndAlpha() {
+    if (layoutParams == null) return;
+    layoutParams.flags = getLayoutParamsFlags();
+    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
+      layoutParams.alpha = isTouchThroughMode() ? TOUCH_THROUGH_WINDOW_ALPHA : 1.0f;
+    }
   }
 
   /**
@@ -182,6 +201,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
     WritableMap params = Arguments.createMap();
     params.putDouble("x", x);
     params.putDouble("y", y);
+    params.putString("mode", mode);
     lyricEvent.sendEvent(lyricEvent.SET_VIEW_POSITION, params);
   }
 
@@ -208,10 +228,12 @@ public class LyricView extends Activity implements View.OnTouchListener {
   public void showLyricView(Bundle options) {
     isLock = options.getBoolean("isLock", isLock);
     isSingleLine = options.getBoolean("isSingleLine", isSingleLine);
+    isStatusBarMode = options.getBoolean("isStatusBarMode", isStatusBarMode);
     isShowToggleAnima = options.getBoolean("isShowToggleAnima", isShowToggleAnima);
     unplayColor = options.getString("unplayColor", unplayColor);
     playedColor = options.getString("playedColor", playedColor);
     shadowColor = options.getString("shadowColor", shadowColor);
+    backgroundColor = options.getString("backgroundColor", backgroundColor);
     prevViewPercentageX = (float) options.getDouble("lyricViewX", 0f) / 100f;
     prevViewPercentageY = (float) options.getDouble("lyricViewY", 0f) / 100f;
     textX = options.getString("textX", textX);
@@ -293,6 +315,20 @@ public class LyricView extends Activity implements View.OnTouchListener {
       textView.setMaxLines(maxLineNum);
     }
   }
+
+  private void applyBackground(boolean visible) {
+    if (textView == null) return;
+    if (!visible) {
+      textView.setBackgroundColor(Color.TRANSPARENT);
+      return;
+    }
+
+    GradientDrawable drawable = new GradientDrawable();
+    drawable.setColor(parseColor(backgroundColor));
+    drawable.setCornerRadius(isStatusBarMode ? 999f : 6f);
+    textView.setBackground(drawable);
+  }
+
   private void handleShowLyric() {
     if (windowManager == null) {
       windowManager = (WindowManager) reactContext.getSystemService(Context.WINDOW_SERVICE);
@@ -323,20 +359,11 @@ public class LyricView extends Activity implements View.OnTouchListener {
     // layoutParams.flags = isLock
     //  ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
     //  : WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-    layoutParams.flags = getLayoutParamsFlags();
+    applyWindowFlagsAndAlpha();
     if (isLock) {
-      textView.setBackgroundColor(Color.TRANSPARENT);
-
-      // 修复 Android 12 的穿透点击问题
-      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-        layoutParams.alpha = 0.8f;
-      }
+      applyBackground(isStatusBarMode);
     } else {
-      textView.setBackgroundResource(R.drawable.rounded_corner);
-
-      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-        layoutParams.alpha = 1.0f;
-      }
+      applyBackground(true);
     }
 
     // TYPE_SYSTEM_ALERT  系统提示,它总是出现在应用程序窗口之上
@@ -417,6 +444,15 @@ public class LyricView extends Activity implements View.OnTouchListener {
     windowManager.updateViewLayout(textView, layoutParams);
   }
 
+  public void setPosition(float x, float y) {
+    if (windowManager == null || textView == null) return;
+    prevViewPercentageX = x / 100f;
+    prevViewPercentageY = y / 100f;
+    fixViewPosition();
+    windowManager.updateViewLayout(textView, layoutParams);
+    sendPositionEvent(x, y);
+  }
+
   @Override
   public boolean onTouch(View v, MotionEvent event) {
     int maxX = maxWidth - layoutParams.width;
@@ -491,24 +527,16 @@ public class LyricView extends Activity implements View.OnTouchListener {
   public void lockView() {
     isLock = true;
     if (windowManager == null || textView == null) return;
-    layoutParams.flags = getLayoutParamsFlags();
-
-    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-      layoutParams.alpha = 0.8f;
-    }
-    textView.setBackgroundColor(Color.TRANSPARENT);
+    applyWindowFlagsAndAlpha();
+    applyBackground(isStatusBarMode);
     windowManager.updateViewLayout(textView, layoutParams);
   }
 
   public void unlockView() {
     isLock = false;
     if (windowManager == null || textView == null) return;
-    layoutParams.flags = getLayoutParamsFlags();
-
-    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-      layoutParams.alpha = 1.0f;
-    }
-    textView.setBackgroundResource(R.drawable.rounded_corner);
+    applyWindowFlagsAndAlpha();
+    applyBackground(true);
     windowManager.updateViewLayout(textView, layoutParams);
   }
 
@@ -520,6 +548,21 @@ public class LyricView extends Activity implements View.OnTouchListener {
     textView.setTextColor(parseColor(playedColor));
     textView.setShadowColor(parseColor(shadowColor));
     // windowManager.updateViewLayout(textView, layoutParams);
+  }
+
+  public void setBackgroundColor(String backgroundColor) {
+    this.backgroundColor = backgroundColor;
+    if (windowManager == null || textView == null) return;
+    applyBackground(!isLock || isStatusBarMode);
+    windowManager.updateViewLayout(textView, layoutParams);
+  }
+
+  public void setStatusBarMode(boolean isStatusBarMode) {
+    this.isStatusBarMode = isStatusBarMode;
+    if (windowManager == null || textView == null) return;
+    applyWindowFlagsAndAlpha();
+    applyBackground(!isLock || isStatusBarMode);
+    windowManager.updateViewLayout(textView, layoutParams);
   }
 
   public void setLyricTextPosition(String textX, String textY) {
@@ -570,6 +613,7 @@ public class LyricView extends Activity implements View.OnTouchListener {
     createTextView();
     textView.setWidth(layoutParams.width);
     textView.setHeight(layoutParams.height);
+    applyWindowFlagsAndAlpha();
     windowManager.addView(textView, layoutParams);
 
     if (isLock) lockView();

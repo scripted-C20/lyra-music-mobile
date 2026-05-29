@@ -19,6 +19,7 @@ import Button from '../../components/Button'
 import { updateSetting } from '@/core/common'
 import {
   setDesktopLyricAlpha,
+  setDesktopLyricBackgroundColor,
   setDesktopLyricColor,
   setDesktopLyricMaxLineNum,
   setDesktopLyricSingleLine,
@@ -43,7 +44,8 @@ export default memo(() => {
       setShowDesktopLyricToggleAnima(true),
       toggleDesktopLyricLock(false),
       setDesktopLyricTextPosition('left', 'top'),
-      setDesktopLyricColor(null, 'rgba(255, 59, 48, 1)', 'rgba(0, 0, 0, 0.6)'),
+      setDesktopLyricColor('theme', 'theme', 'rgba(0, 0, 0, 0.6)'),
+      setDesktopLyricBackgroundColor('rgba(0, 0, 0, 0)'),
     ]).then(() => {
       updateSetting({
         'desktopLyric.style.fontSize': 180,
@@ -55,8 +57,10 @@ export default memo(() => {
         'desktopLyric.isLock': false,
         'desktopLyric.textPosition.x': 'left',
         'desktopLyric.textPosition.y': 'top',
-        'desktopLyric.style.lyricPlayedColor': 'rgba(255, 59, 48, 1)',
+        'desktopLyric.style.lyricUnplayColor': 'theme',
+        'desktopLyric.style.lyricPlayedColor': 'theme',
         'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.6)',
+        'desktopLyric.style.backgroundColor': 'rgba(0, 0, 0, 0)',
       })
       toast(t('setting_lyric_desktop_reset_success_tip'))
     })

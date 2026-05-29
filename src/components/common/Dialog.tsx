@@ -9,7 +9,7 @@ import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
 
-const HEADER_HEIGHT = 20
+const HEADER_HEIGHT = 34
 const styles = createStyle({
   centeredView: {
     flex: 1,
@@ -35,22 +35,27 @@ const styles = createStyle({
     flexGrow: 0,
     flexShrink: 0,
     flexDirection: 'row',
+    alignItems: 'center',
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
     height: HEADER_HEIGHT,
+    paddingTop: 6,
+    paddingBottom: 6,
   },
   title: {
-    paddingLeft: 5,
-    paddingRight: 25,
-    lineHeight: HEADER_HEIGHT,
+    paddingLeft: 12,
+    paddingRight: 38,
+    lineHeight: 20,
   },
   closeBtn: {
     position: 'absolute',
-    right: 0,
+    right: 6,
+    top: 5,
     borderTopRightRadius: 4,
     flexGrow: 0,
     flexShrink: 0,
-    height: HEADER_HEIGHT,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -91,7 +96,7 @@ export default forwardRef<DialogType, DialogProps>(({
 
   const closeBtnComponent = useMemo(() => {
     return closeBtn
-      ? <TouchableHighlight style={{ ...styles.closeBtn, width: scaleSizeH(HEADER_HEIGHT) }} underlayColor={theme['c-primary-dark-200-alpha-600']} onPress={() => modalRef.current?.setVisible(false)}>
+      ? <TouchableHighlight style={{ ...styles.closeBtn, width: scaleSizeH(24) }} underlayColor={theme['c-primary-dark-200-alpha-600']} onPress={() => modalRef.current?.setVisible(false)}>
           <Icon name="close" color={theme['c-primary-dark-500-alpha-500']} size={10} />
         </TouchableHighlight>
       : null

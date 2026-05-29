@@ -5,14 +5,14 @@ import ConfirmAlert, { type ConfirmAlertType } from '@/components/common/Confirm
 import { toast } from '@/utils/tools'
 
 import { useI18n } from '@/lang'
-import { checkDesktopLyricOverlayPermission, hideDesktopLyric, openDesktopLyricOverlayPermissionActivity, showDesktopLyric } from '@/core/desktopLyric'
+import { checkDesktopLyricOverlayPermission, hideDesktopLyric, hideStatusBarLyric, openDesktopLyricOverlayPermissionActivity, showDesktopLyric, showStatusBarLyric } from '@/core/desktopLyric'
 import { updateSetting } from '@/core/common'
 
 export interface DesktopLyricEnableType {
   setEnabled: (enabled: boolean) => void
 }
 
-export default forwardRef<DesktopLyricEnableType, {}>((props, ref) => {
+export default forwardRef<DesktopLyricEnableType, { mode?: 'desktop' | 'statusBar' }>(({ mode = 'desktop' }, ref) => {
   const t = useI18n()
   const [visible, setVisible] = useState(false)
   // const setIsShowDesktopLyric = useDispatch('common', 'setIsShowDesktopLyric')
@@ -37,21 +37,29 @@ export default forwardRef<DesktopLyricEnableType, {}>((props, ref) => {
     if (isEnable) {
       try {
         await checkDesktopLyricOverlayPermission()
-        await showDesktopLyric()
-        updateSetting({ 'desktopLyric.enable': true })
+        if (mode == 'statusBar') {
+          await hideStatusBarLyric()
+          await showStatusBarLyric()
+          updateSetting({ 'statusBarLyric.enable': true, 'statusBarLyric.isLock': true })
+        } else {
+          await hideDesktopLyric()
+          await showDesktopLyric()
+          updateSetting({ 'desktopLyric.enable': true })
+        }
       } catch (err) {
         console.log(err)
-        updateSetting({ 'desktopLyric.enable': false })
+        updateSetting(mode == 'statusBar' ? { 'statusBarLyric.enable': false } : { 'desktopLyric.enable': false })
         handleShowModal()
       }
     } else {
-      await hideDesktopLyric()
-      updateSetting({ 'desktopLyric.enable': false })
+      if (mode == 'statusBar') await hideStatusBarLyric()
+      else await hideDesktopLyric()
+      updateSetting(mode == 'statusBar' ? { 'statusBarLyric.enable': false } : { 'desktopLyric.enable': false })
     }
   }
 
   const handleTipsCancel = () => {
-    updateSetting({ 'desktopLyric.enable': false })
+    updateSetting(mode == 'statusBar' ? { 'statusBarLyric.enable': false } : { 'desktopLyric.enable': false })
     toast(t('disagree_tip'), 'long')
   }
   const handleTipsConfirm = () => {

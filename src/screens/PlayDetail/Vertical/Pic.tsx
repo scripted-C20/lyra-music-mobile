@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, StyleSheet, View } from 'react-native'
+import { Animated, Easing, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import { useIsPlay, usePlayerMusicInfo } from '@/store/player/hook'
 import { useWindowSize } from '@/utils/hooks'
@@ -19,6 +19,7 @@ const MiniLyric = ({ activeColor, dimColor, height }: { activeColor: string, dim
   const { line } = useLrcPlay()
   const LINE_HEIGHT = 26
   const VISIBLE = Math.max(3, Math.floor(height / LINE_HEIGHT))
+  const wrapHeight = VISIBLE * LINE_HEIGHT
   const translateAnim = useRef(new Animated.Value(0)).current
 
   const validLines = useMemo(() => lyricLines.filter(l => !!l.text.trim()), [lyricLines])
@@ -44,10 +45,10 @@ const MiniLyric = ({ activeColor, dimColor, height }: { activeColor: string, dim
     }).start()
   }, [activeIdx, translateAnim])
 
-  if (!hasLyric) return <View style={{ height }} />
+  if (!hasLyric) return <View style={{ height: wrapHeight }} />
 
   return (
-    <View style={[styles.miniLyricWrap, { height: VISIBLE * LINE_HEIGHT }]}>
+    <View style={[styles.miniLyricWrap, { height: wrapHeight }]}>
       <Animated.View style={{ transform: [{ translateY: translateAnim }], paddingTop: (Math.floor(VISIBLE / 2)) * LINE_HEIGHT }}>
         {validLines.map((l, idx) => {
           const active = idx === activeIdx
@@ -78,6 +79,7 @@ export default ({ componentId }: { componentId: string }) => {
 
   const [animated, setAnimated] = useState(!!commonState.componentIds.playDetail)
   const [pic, setPic] = useState(musicInfo.pic)
+  const [containerHeight, setContainerHeight] = useState(0)
 
   useEffect(() => { if (animated) setPic(musicInfo.pic) }, [musicInfo.pic, animated])
   useNavigationComponentDidAppear(componentId, () => { setAnimated(true) })
@@ -117,10 +119,14 @@ export default ({ componentId }: { componentId: string }) => {
     outputRange: ['0deg', '360deg'],
   })
 
+  const contentHeight = containerHeight > 0
+    ? containerHeight
+    : Math.max(360, winH - statusBarH - HEADER_HEIGHT - 190)
+
   const recordSize = useMemo(() => {
-    const maxH = (winH - statusBarH - HEADER_HEIGHT - 272) * 0.74
+    const maxH = Math.max(176, contentHeight * 0.43)
     return Math.min(winW * 0.58, maxH)
-  }, [statusBarH, winH, winW])
+  }, [contentHeight, winW])
 
   const stageSize = useMemo(() => ({
     width: recordSize * 1.16,
@@ -134,11 +140,23 @@ export default ({ componentId }: { componentId: string }) => {
   const armLength = recordSize * 0.42
   const armThickness = Math.max(10, recordSize * 0.032)
   const ringScales = [0.96, 0.88, 0.8, 0.72, 0.64, 0.56]
+  const artworkOffsetY = Math.max(4, Math.min(14, contentHeight * 0.018))
+  const miniLyricHeight = useMemo(() => {
+    const singerHeight = musicInfo.singer ? 34 : 0
+    const usedHeight = 12 + artworkOffsetY + stageSize.height + singerHeight + 18
+    const remainingHeight = Math.max(96, contentHeight - usedHeight - 8)
+    return Math.round(Math.max(96, Math.min(220, contentHeight * 0.34, remainingHeight)))
+  }, [artworkOffsetY, contentHeight, musicInfo.singer, stageSize.height])
+  const handleLayout = ({ nativeEvent }: LayoutChangeEvent) => {
+    const nextHeight = nativeEvent.layout.height
+    if (!Number.isFinite(nextHeight) || nextHeight <= 0) return
+    setContainerHeight(prevHeight => Math.abs(prevHeight - nextHeight) > 2 ? nextHeight : prevHeight)
+  }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={handleLayout}>
       {/* 唱片动画（往上提） */}
-      <View style={[styles.artworkBlock, { transform: [{ translateY: 10 }] }]}>
+      <View style={[styles.artworkBlock, { transform: [{ translateY: artworkOffsetY }] }]}>
         <View style={[styles.stage, stageSize]}>
           <View
             pointerEvents="none"
@@ -314,7 +332,7 @@ export default ({ componentId }: { componentId: string }) => {
         <MiniLyric
           activeColor={ds.isDark ? '#ffffff' : ds.text}
           dimColor={ds.isDark ? 'rgba(255,255,255,0.55)' : 'rgba(55,48,48,0.6)'}
-          height={130}
+          height={miniLyricHeight}
         />
       </View>
     </View>

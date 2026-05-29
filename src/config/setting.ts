@@ -69,7 +69,15 @@ export const updateSetting = (setting?: Partial<LX.AppSetting> | null, isInit: b
     originSetting = { ...defaultSetting }
   } else originSetting = settingState.setting
 
-  const result = mergeSetting(originSetting, setting)
+  const nextSetting = setting ? { ...setting } : setting
+  if (nextSetting) normalizeLyricOverlayEnable(nextSetting)
+  const result = mergeSetting(originSetting, nextSetting)
+
+  if (result.setting['statusBarLyric.enable'] && !result.setting['statusBarLyric.isLock']) {
+    result.setting['statusBarLyric.isLock'] = true
+    if (!result.updatedSettingKeys.includes('statusBarLyric.isLock')) result.updatedSettingKeys.push('statusBarLyric.isLock')
+    result.updatedSetting['statusBarLyric.isLock'] = true
+  }
 
   result.setting.version = defaultSetting.version
 
@@ -93,8 +101,35 @@ const applyThemeDefaultMigration = (setting: LX.AppSetting) => {
   }
 
   if (setting['desktopLyric.style.lyricPlayedColor'] == 'rgba(7, 197, 86, 1)') {
-    setting['desktopLyric.style.lyricPlayedColor'] = 'rgba(255, 59, 48, 1)'
+    setting['desktopLyric.style.lyricPlayedColor'] = 'theme'
   }
+
+  if (setting['desktopLyric.style.lyricPlayedColor'] == 'rgba(255, 59, 48, 1)') {
+    setting['desktopLyric.style.lyricPlayedColor'] = 'theme'
+  }
+
+  if (setting['desktopLyric.style.lyricUnplayColor'] == 'rgba(255, 255, 255, 1)') {
+    setting['desktopLyric.style.lyricUnplayColor'] = 'theme'
+  }
+
+  if (setting['desktopLyric.style.backgroundColor'] == 'rgba(0, 0, 0, 0.16)') {
+    setting['desktopLyric.style.backgroundColor'] = 'rgba(0, 0, 0, 0)'
+  }
+
+  if (setting['statusBarLyric.style.lyricPlayedColor'] == 'rgba(7, 197, 86, 1)') {
+    setting['statusBarLyric.style.lyricPlayedColor'] = 'theme'
+  }
+
+  if (setting['statusBarLyric.style.lyricUnplayColor'] == 'rgba(7, 197, 86, 1)') {
+    setting['statusBarLyric.style.lyricUnplayColor'] = 'theme'
+  }
+}
+
+const normalizeLyricOverlayEnable = (setting: Partial<LX.AppSetting>) => {
+  if (setting['statusBarLyric.enable']) {
+    setting['statusBarLyric.isLock'] = true
+  }
+  if (setting['desktopLyric.enable']) setting['desktopLyric.statusBarMode'] = false
 }
 
 export const initSetting = async() => {
@@ -127,6 +162,7 @@ export const initSetting = async() => {
   // console.log(setting)
   const updatedSetting = updateSetting(setting, true)
   applyThemeDefaultMigration(updatedSetting.setting)
+  normalizeLyricOverlayEnable(updatedSetting.setting)
   void saveData(storageDataPrefix.setting, updatedSetting.setting)
 
   return updatedSetting

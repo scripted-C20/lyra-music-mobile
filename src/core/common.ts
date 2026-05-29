@@ -1,4 +1,4 @@
-import { hideDesktopLyric } from './desktopLyric'
+import { hideDesktopLyric, hideStatusBarLyric } from './desktopLyric'
 import { exitApp as utilExitApp } from '@/utils/nativeModules/utils'
 import { destroy as destroyPlayer } from '@/plugins/player/utils'
 import { initSetting as initAppSetting } from '@/config/setting'
@@ -14,7 +14,7 @@ import { saveData } from '@/plugins/storage'
 import { throttle } from '@/utils/common'
 import { getSelectedManagedFolder, saveFontSize, saveViewPrevState, setSelectedManagedFolder } from '@/utils/data'
 import { showPactModal as handleShowPactModal } from '@/navigation'
-import { hideDesktopLyricView } from '@/utils/nativeModules/lyricDesktop'
+import { hideDesktopLyricView, hideStatusBarLyricView } from '@/utils/nativeModules/lyricDesktop'
 import { getPersistedUriList, selectManagedFolder } from '@/utils/fs'
 
 
@@ -56,8 +56,10 @@ export const exitApp = (reason: string) => {
   isDestroying = true
   void Promise.all([
     hideDesktopLyric(),
+    hideStatusBarLyric(),
     destroyPlayer(),
     hideDesktopLyricView(),
+    hideStatusBarLyricView(),
   ]).finally(() => {
     isDestroying = false
     utilExitApp()
@@ -89,7 +91,7 @@ export const removeComponentId = (name: string) => {
 export const setNavActiveId = (id: Parameters<typeof commonActions.setNavActiveId>['0']) => {
   if (id == commonState.navActiveId) return
   commonActions.setNavActiveId(id)
-  if (id != 'nav_setting') {
+  if (id != 'nav_setting' && id != 'nav_search') {
     commonActions.setLastNavActiveId(id)
     saveViewPrevState({ id })
   }

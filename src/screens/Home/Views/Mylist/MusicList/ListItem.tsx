@@ -9,7 +9,7 @@ import Text from '@/components/common/Text'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT + 10)
 
-export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval }: {
+export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval, isShowSource }: {
   item: LX.Music.MusicInfo
   index: number
   activeIndex: number
@@ -20,6 +20,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   rowInfo: RowInfo
   isShowAlbumName: boolean
   isShowInterval: boolean
+  isShowSource: boolean
 }) => {
   const theme = useTheme()
   const isSelected = selectedList.includes(item)
@@ -82,7 +83,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
         </View>
 
         {/* 来源标签 */}
-        {item.source ? (
+        {isShowSource && item.source ? (
           <View style={[styles.qualityPill, { backgroundColor: theme['c-primary-light-1000-alpha-200'], borderColor: theme['c-border-background'] }]}>
             <Text size={10} color={theme['c-600']} style={styles.qualityText}>
               {item.source.toUpperCase()}
@@ -109,6 +110,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
     prevProps.index === nextProps.index &&
     prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
     prevProps.isShowInterval === nextProps.isShowInterval &&
+    prevProps.isShowSource === nextProps.isShowSource &&
     prevProps.activeIndex !== nextProps.index &&
     nextProps.activeIndex !== nextProps.index &&
     nextProps.selectedList.includes(nextProps.item) === prevProps.selectedList.includes(nextProps.item)

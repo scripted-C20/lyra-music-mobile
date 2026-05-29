@@ -9,6 +9,9 @@ import { getSearchSetting, saveSearchSetting } from '@/utils/data'
 import { createStyle } from '@/utils/tools'
 import List, { type ListType } from './List'
 import { addHistoryWord, setTempSource } from '@/core/search/search'
+import { useBackHandler } from '@/utils/hooks/useBackHandler'
+import commonState from '@/store/common/state'
+import { setNavActiveId } from '@/core/common'
 
 interface SearchInfo {
   temp_source: LX.OnlineSource
@@ -39,6 +42,12 @@ export default () => {
   const headerBarRef = useRef<HeaderBarType>(null)
   const listRef = useRef<ListType>(null)
   const searchInfo = useRef<SearchInfo>({ temp_source: 'kw', source: 'kw', searchType: 'music' })
+
+  useBackHandler(useCallback(() => {
+    if (commonState.navActiveId != 'nav_search') return false
+    setNavActiveId(commonState.lastNavActiveId == 'nav_search' ? 'nav_songlist' : commonState.lastNavActiveId)
+    return true
+  }, []))
 
   const handleSearch = useCallback((text: string) => {
     headerBarRef.current?.setText(text)

@@ -9,6 +9,7 @@ import { useDS } from '@/theme/useDS'
 import StatusBar from '@/components/common/StatusBar'
 import Input, { type InputType, type InputProps } from '@/components/common/Input'
 import searchState from '@/store/search/state'
+import commonState from '@/store/common/state'
 
 export default memo(() => {
   const activeId = useNavActiveId()
@@ -48,6 +49,9 @@ export default memo(() => {
   const handleInputSubmit = (({ nativeEvent: { text } }) => { handleSearchSubmit(text) }) as NonNullable<InputProps['onSubmitEditing']>
 
   const goToSearch = () => { setNavActiveId('nav_search') }
+  const goBackFromSearch = () => {
+    setNavActiveId(commonState.lastNavActiveId === 'nav_search' ? 'nav_songlist' : commonState.lastNavActiveId)
+  }
 
   return (
     <>
@@ -59,7 +63,7 @@ export default memo(() => {
             <View style={styles.row}>
               <TouchableOpacity
                 activeOpacity={0.6}
-                onPress={() => { setNavActiveId(prevActiveIdRef.current === 'nav_search' ? 'nav_songlist' : prevActiveIdRef.current) }}
+                onPress={goBackFromSearch}
                 style={styles.backBtn}
               >
                 <Icon name="chevron-left" size={16} color={ds.text} />

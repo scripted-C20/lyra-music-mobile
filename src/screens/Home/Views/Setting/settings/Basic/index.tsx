@@ -6,6 +6,7 @@ import SourceName from './SourceName'
 import Language from './Language'
 import FontSize from './FontSize'
 import ShareType from './ShareType'
+import ShareNameFormat from './ShareNameFormat'
 import IsStartupAutoPlay from './IsStartupAutoPlay'
 import IsStartupPushPlayDetailScreen from './IsStartupPushPlayDetailScreen'
 import IsAutoHidePlayBar from './IsAutoHidePlayBar'
@@ -45,6 +46,7 @@ export default memo(() => {
       </SubTitle>
       <SubTitle title={t('setting_group_source')}>
         <ShareType />
+        <ShareNameFormat />
         <IsUseSystemFileSelector />
         <SourceName />
       </SubTitle>

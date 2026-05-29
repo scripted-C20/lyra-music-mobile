@@ -28,6 +28,7 @@ public class Lyric extends LyricPlayer {
   List lines = new ArrayList();
   boolean isShowTranslation;
   boolean isShowRoma;
+  String mode;
   boolean isShowLyricView = false;
   boolean isSendLyricTextEvent = false;
   boolean isScreenOff = false;
@@ -35,11 +36,12 @@ public class Lyric extends LyricPlayer {
   String translationText = "";
   String romaLyricText = "";
 
-  Lyric(ReactApplicationContext reactContext, boolean isShowTranslation, boolean isShowRoma, float playbackRate) {
+  Lyric(ReactApplicationContext reactContext, boolean isShowTranslation, boolean isShowRoma, float playbackRate, String mode) {
     this.reactAppContext = reactContext;
     this.isShowTranslation = isShowTranslation;
     this.isShowRoma = isShowRoma;
     this.playbackRate = playbackRate;
+    this.mode = mode;
     registerScreenBroadcastReceiver();
     // checkA2DPConnection(reactContext);
   }
@@ -115,7 +117,7 @@ public class Lyric extends LyricPlayer {
   private void handleScreenOn() {
     isScreenOff = false;
     if (isDisableAutoPause()) return;
-    if (lyricView == null) lyricView = new LyricView(reactAppContext, lyricEvent);
+    if (lyricView == null) lyricView = new LyricView(reactAppContext, lyricEvent, mode);
     lyricView.runOnUiThread(() -> {
       handleGetCurrentLyric(lastLine);
       setTempPause(false);
@@ -163,13 +165,17 @@ public class Lyric extends LyricPlayer {
   }
 
   public void showDesktopLyric(Bundle options, Promise promise) {
-    if (isShowLyricView) return;
+    if (isShowLyricView) {
+      promise.resolve(null);
+      return;
+    }
     if (lyricEvent == null) lyricEvent = new LyricEvent(reactAppContext);
     isShowLyricView = true;
-    if (lyricView == null) lyricView = new LyricView(reactAppContext, lyricEvent);
+    if (lyricView == null) lyricView = new LyricView(reactAppContext, lyricEvent, mode);
     try {
       lyricView.showLyricView(options);
     } catch (Exception e) {
+      isShowLyricView = false;
       promise.reject(e);
       Log.e("Lyric", e.getMessage());
       return;
@@ -245,6 +251,11 @@ public class Lyric extends LyricPlayer {
     lyricView.setWidth(width);
   }
 
+  public void setPosition(float x, float y) {
+    if (lyricView == null) return;
+    lyricView.setPosition(x, y);
+  }
+
   public void setSingleLine(boolean singleLine) {
     if (lyricView == null) return;
     lyricView.setSingleLine(singleLine);
@@ -268,6 +279,16 @@ public class Lyric extends LyricPlayer {
   public void setPlayedColor(String unplayColor, String playedColor, String shadowColor) {
     if (lyricView == null) return;
     lyricView.setColor(unplayColor, playedColor, shadowColor);
+  }
+
+  public void setBackgroundColor(String backgroundColor) {
+    if (lyricView == null) return;
+    lyricView.setBackgroundColor(backgroundColor);
+  }
+
+  public void setStatusBarMode(boolean isStatusBarMode) {
+    if (lyricView == null) return;
+    lyricView.setStatusBarMode(isStatusBarMode);
   }
 
   public void setAlpha(float alpha) {

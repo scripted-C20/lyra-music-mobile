@@ -4,6 +4,7 @@ import Basic from './settings/Basic'
 import CustomSource from './settings/CustomSource'
 import Player from './settings/Player'
 import LyricDesktop from './settings/LyricDesktop'
+import StatusBarLyric from './settings/StatusBarLyric'
 import Search from './settings/Search'
 import List from './settings/List'
 import Sync from './settings/Sync'
@@ -15,6 +16,7 @@ export const SETTING_SCREENS = [
   'custom_source',
   'player',
   'lyric_desktop',
+  'statusbar_lyric',
   'search',
   'list',
   'sync',
@@ -55,6 +57,7 @@ const Main = forwardRef<MainType, {}>((props, ref) => {
       case 'custom_source': return <CustomSource />
       case 'player': return <Player />
       case 'lyric_desktop': return <LyricDesktop />
+      case 'statusbar_lyric': return <StatusBarLyric />
       case 'search': return <Search />
       case 'list': return <List />
       case 'sync': return <Sync />

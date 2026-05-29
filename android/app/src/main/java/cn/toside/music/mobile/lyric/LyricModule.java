@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReadableMap;
 public class LyricModule extends ReactContextBaseJavaModule {
   private final ReactApplicationContext reactContext;
   Lyric lyric;
+  Lyric statusBarLyric;
   // final Map<String, Object> constants = new HashMap<>();
 
   boolean isShowTranslation = false;
@@ -23,6 +24,16 @@ public class LyricModule extends ReactContextBaseJavaModule {
   float playbackRate = 1;
 
   private int listenerCount = 0;
+
+  private Lyric getLyric() {
+    if (lyric == null) lyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate, "desktop");
+    return lyric;
+  }
+
+  private Lyric getStatusBarLyric() {
+    if (statusBarLyric == null) statusBarLyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate, "statusBar");
+    return statusBarLyric;
+  }
 
   LyricModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -67,8 +78,12 @@ public class LyricModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void showDesktopLyric(ReadableMap data, Promise promise) {
-    if (lyric == null) lyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate);
-    lyric.showDesktopLyric(Arguments.toBundle(data), promise);
+    getLyric().showDesktopLyric(Arguments.toBundle(data), promise);
+  }
+
+  @ReactMethod
+  public void showStatusBarLyric(ReadableMap data, Promise promise) {
+    getStatusBarLyric().showDesktopLyric(Arguments.toBundle(data), promise);
   }
 
   @ReactMethod
@@ -78,9 +93,14 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void hideStatusBarLyric(Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.hideDesktopLyric();
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setSendLyricTextEvent(boolean isSend, Promise promise) {
-    if (lyric == null) lyric = new Lyric(reactContext, isShowTranslation, isShowRoma, playbackRate);
-    lyric.setSendLyricTextEvent(isSend);
+    getLyric().setSendLyricTextEvent(isSend);
     promise.resolve(null);
   }
 
@@ -90,6 +110,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
     // Log.d("Lyric", "set lyric: " + lyric);
     // Log.d("Lyric", "set lyric translation: " + translation);
     if (this.lyric != null) this.lyric.setLyric(lyric, translation, romaLyric);
+    if (statusBarLyric != null) statusBarLyric.setLyric(lyric, translation, romaLyric);
     promise.resolve(null);
   }
 
@@ -97,6 +118,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void setPlaybackRate(float playbackRate, Promise promise) {
     this.playbackRate = playbackRate;
     if (lyric != null) lyric.setPlaybackRate(playbackRate);
+    if (statusBarLyric != null) statusBarLyric.setPlaybackRate(playbackRate);
     promise.resolve(null);
   }
 
@@ -104,6 +126,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void toggleTranslation(boolean isShowTranslation, Promise promise) {
     this.isShowTranslation = isShowTranslation;
     if (lyric != null) lyric.toggleTranslation(isShowTranslation);
+    if (statusBarLyric != null) statusBarLyric.toggleTranslation(isShowTranslation);
     promise.resolve(null);
   }
 
@@ -111,6 +134,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void toggleRoma(boolean isShowRoma, Promise promise) {
     this.isShowRoma = isShowRoma;
     if (lyric != null) lyric.toggleRoma(isShowRoma);
+    if (statusBarLyric != null) statusBarLyric.toggleRoma(isShowRoma);
     promise.resolve(null);
   }
 
@@ -118,6 +142,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void play(int time, Promise promise) {
     Log.d("Lyric", "play lyric: " + time);
     if (lyric != null) lyric.play(time);
+    if (statusBarLyric != null) statusBarLyric.play(time);
     promise.resolve(null);
   }
 
@@ -125,6 +150,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void pause(Promise promise) {
     Log.d("Lyric", "play pause");
     if (lyric != null) lyric.pauseLyric();
+    if (statusBarLyric != null) statusBarLyric.pauseLyric();
     promise.resolve(null);
   }
 
@@ -147,8 +173,38 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void setStatusBarColor(String unplayColor, String playedColor, String shadowColor, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setPlayedColor(unplayColor, playedColor, shadowColor);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setBackgroundColor(String backgroundColor, Promise promise) {
+    if (lyric != null) lyric.setBackgroundColor(backgroundColor);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarBackgroundColor(String backgroundColor, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setBackgroundColor(backgroundColor);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarMode(boolean isStatusBarMode, Promise promise) {
+    if (lyric != null) lyric.setStatusBarMode(isStatusBarMode);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setAlpha(float alpha, Promise promise) {
     if (lyric != null) lyric.setAlpha(alpha);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarAlpha(float alpha, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setAlpha(alpha);
     promise.resolve(null);
   }
 
@@ -159,8 +215,20 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void setStatusBarTextSize(float size, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setTextSize(size);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setMaxLineNum(int maxLineNum, Promise promise) {
     if (lyric != null) lyric.setMaxLineNum(maxLineNum);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarMaxLineNum(int maxLineNum, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setMaxLineNum(maxLineNum);
     promise.resolve(null);
   }
 
@@ -171,8 +239,20 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void setStatusBarSingleLine(boolean singleLine, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setSingleLine(singleLine);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setShowToggleAnima(boolean showToggleAnima, Promise promise) {
     if (lyric != null) lyric.setShowToggleAnima(showToggleAnima);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarShowToggleAnima(boolean showToggleAnima, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setShowToggleAnima(showToggleAnima);
     promise.resolve(null);
   }
 
@@ -183,8 +263,32 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void setStatusBarWidth(int width, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setWidth(width);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setPosition(double x, double y, Promise promise) {
+    if (lyric != null) lyric.setPosition((float) x, (float) y);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarPosition(double x, double y, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setPosition((float) x, (float) y);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setLyricTextPosition(String positionX, String positionY, Promise promise) {
     if (lyric != null) lyric.setLyricTextPosition(positionX, positionY);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void setStatusBarLyricTextPosition(String positionX, String positionY, Promise promise) {
+    if (statusBarLyric != null) statusBarLyric.setLyricTextPosition(positionX, positionY);
     promise.resolve(null);
   }
 

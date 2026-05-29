@@ -12,11 +12,11 @@ import { useTheme } from '@/store/theme/hook'
 // import { useTheme } from '@/store/theme/hook'
 import BoardsList, { type BoardsListType, type BoardsListProps } from '../BoardsList'
 import type { InitState as CommonState } from '@/store/common/state'
-import settingState from '@/store/setting/state'
 import { getBoardsList } from '@/core/leaderboard'
 import { COMPONENT_IDS } from '@/config/constant'
 import { handleCollect, handlePlay } from '../listAction'
 import boardState from '@/store/leaderboard/state'
+import { useSettingValue } from '@/store/setting/hook'
 
 
 const MAX_WIDTH = scaleSizeW(300)
@@ -24,6 +24,7 @@ const MAX_WIDTH = scaleSizeW(300)
 export default () => {
   const drawer = useRef<DrawerLayoutFixedType>(null)
   const theme = useTheme()
+  const drawerLayoutPosition = useSettingValue('common.drawerLayoutPosition')
   const musicListRef = useRef<MusicListType>(null)
   const isUnmountedRef = useRef(false)
   const boardsListRef = useRef<BoardsListType>(null)
@@ -128,7 +129,7 @@ export default () => {
       // drawerWidth={width}
       widthPercentage={0.7}
       widthPercentageMax={MAX_WIDTH}
-      drawerPosition={settingState.setting['common.drawerLayoutPosition']}
+      drawerPosition={drawerLayoutPosition}
       renderNavigationView={navigationView}
       drawerBackgroundColor={theme['c-main-background']}
       style={{ elevation: 2 }}

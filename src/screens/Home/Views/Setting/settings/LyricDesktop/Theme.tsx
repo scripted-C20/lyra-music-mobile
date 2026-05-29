@@ -1,12 +1,16 @@
 import { updateSetting } from '@/core/common'
-import { setDesktopLyricColor } from '@/core/desktopLyric'
+import { setDesktopLyricBackgroundColor, setDesktopLyricColor } from '@/core/desktopLyric'
 import { useI18n } from '@/lang'
 import { memo } from 'react'
 import { StyleSheet, View, TouchableOpacity } from 'react-native'
 
 import SubTitle from '../../components/SubTitle'
+import Text from '@/components/common/Text'
+import { useDS } from '@/theme/useDS'
+import { useSettingValue } from '@/store/setting/hook'
 
 const themes = [
+  ['theme', 'rgba(0,0,0,0.6)'],
   ['#08e664', 'rgba(0,0,0,0.6)'],
   ['#fffa12', 'rgba(0,0,0,0.6)'],
   ['#019ce4', 'rgba(0,0,0,0.6)'],
@@ -19,14 +23,44 @@ const themes = [
 ] as const
 type Theme = typeof themes[number]
 
-const ThemeItem = ({ color, change }: {
+const backgroundThemes = [
+  'rgba(0, 0, 0, 0)',
+  'rgba(0, 0, 0, 0.16)',
+  'rgba(0, 0, 0, 0.42)',
+  'rgba(255, 255, 255, 0.72)',
+  'rgba(255, 59, 48, 0.18)',
+] as const
+
+const ThemeItem = ({ color, active, change }: {
   color: Theme
+  active: boolean
   change: (color: Theme) => void
 }) => {
+  const ds = useDS()
+
   return (
     <TouchableOpacity style={styles.item} activeOpacity={0.5} onPress={() => { change(color) }}>
-      <View style={styles.colorContent}>
-        <View style={{ ...styles.image, backgroundColor: color[0] }}></View>
+      <View style={[styles.colorContent, { borderColor: active ? ds.accent : ds.separator }]}>
+        <View style={{ ...styles.image, backgroundColor: color[0] == 'theme' ? ds.accent : color[0] }} />
+      </View>
+    </TouchableOpacity>
+  )
+}
+
+const BackgroundItem = ({ color, active, change }: {
+  color: string
+  active: boolean
+  change: (color: string) => void
+}) => {
+  const ds = useDS()
+  const isTransparent = color == 'rgba(0, 0, 0, 0)'
+
+  return (
+    <TouchableOpacity style={styles.item} activeOpacity={0.5} onPress={() => { change(color) }}>
+      <View style={[styles.colorContent, { borderColor: active ? ds.accent : ds.separator }]}>
+        <View style={[styles.image, { backgroundColor: isTransparent ? ds.bgCard : color, borderWidth: isTransparent ? StyleSheet.hairlineWidth : 0, borderColor: ds.separator }]}>
+          {isTransparent ? <Text size={8} color={ds.textDim} style={styles.transparentText}>T</Text> : null}
+        </View>
       </View>
     </TouchableOpacity>
   )
@@ -34,19 +68,38 @@ const ThemeItem = ({ color, change }: {
 
 export default memo(() => {
   const t = useI18n()
+  const textColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
+  const backgroundColor = useSettingValue('desktopLyric.style.backgroundColor')
 
   const setThemeDesktopLyric = (color: Theme) => {
     // const shadowColor = 'rgba(0,0,0,0.6)'
     void setDesktopLyricColor(null, color[0], color[1]).then(() => {
-      updateSetting({ 'desktopLyric.style.lyricPlayedColor': color[0], 'desktopLyric.style.lyricShadowColor': color[1] })
+      updateSetting({
+        'desktopLyric.style.lyricUnplayColor': color[0],
+        'desktopLyric.style.lyricPlayedColor': color[0],
+        'desktopLyric.style.lyricShadowColor': color[1],
+      })
+    })
+  }
+
+  const setBackgroundDesktopLyric = (color: string) => {
+    void setDesktopLyricBackgroundColor(color).then(() => {
+      updateSetting({ 'desktopLyric.style.backgroundColor': color })
     })
   }
 
   return (
     <SubTitle title={t('setting_lyric_desktop_theme')}>
+      <Text size={11} style={styles.label}>{t('setting_lyric_desktop_text_color')}</Text>
       <View style={styles.list}>
         {
-          themes.map((c, i) => <ThemeItem key={i.toString()} color={c} change={setThemeDesktopLyric} />)
+          themes.map((c, i) => <ThemeItem key={i.toString()} color={c} active={textColor == c[0]} change={setThemeDesktopLyric} />)
+        }
+      </View>
+      <Text size={11} style={styles.label}>{t('setting_lyric_desktop_background_color')}</Text>
+      <View style={styles.list}>
+        {
+          backgroundThemes.map(color => <BackgroundItem key={color} color={color} active={backgroundColor == color} change={setBackgroundDesktopLyric} />)
         }
       </View>
     </SubTitle>
@@ -57,6 +110,11 @@ const styles = StyleSheet.create({
   list: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  label: {
+    marginBottom: 4,
+    marginTop: 4,
+    opacity: 0.72,
   },
   item: {
     marginRight: 15,
@@ -69,7 +127,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 4,
-    // borderWidth: 1.6,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,5 +136,10 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     elevation: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transparentText: {
+    fontWeight: '700',
   },
 })

@@ -5,6 +5,7 @@ import Basic from '../settings/Basic'
 import CustomSource from '../settings/CustomSource'
 import Player from '../settings/Player'
 import LyricDesktop from '../settings/LyricDesktop'
+import StatusBarLyric from '../settings/StatusBarLyric'
 import Search from '../settings/Search'
 import List from '../settings/List'
 import Sync from '../settings/Sync'
@@ -28,7 +29,8 @@ const SETTING_LABELS: Record<SettingScreenIds, string> = {
   basic: '基本',
   custom_source: '自定义源',
   player: '播放',
-  lyric_desktop: '歌词',
+  lyric_desktop: '桌面歌词',
+  statusbar_lyric: '状态栏歌词（测试）',
   search: '搜索',
   list: '列表',
   sync: '同步',
@@ -48,6 +50,7 @@ const SettingContent = memo(({ id }: { id: TabId }) => {
     case 'custom_source': return <CustomSource />
     case 'player': return <Player />
     case 'lyric_desktop': return <LyricDesktop />
+    case 'statusbar_lyric': return <StatusBarLyric />
     case 'search': return <Search />
     case 'list': return <List />
     case 'sync': return <Sync />

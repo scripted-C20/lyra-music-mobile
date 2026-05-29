@@ -62,6 +62,8 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
   const rowInfo = useRef(getRowInfo())
   const isShowAlbumName = useSettingValue('list.isShowAlbumName')
   const isShowInterval = useSettingValue('list.isShowInterval')
+  const isShowSource = useSettingValue('list.isShowSource')
+  const isSaveScrollLocation = useSettingValue('list.isSaveScrollLocation')
   // console.log('render music list')
 
   useImperativeHandle(ref, () => ({
@@ -110,7 +112,8 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       isUpdateingList = true
       setList([])
       currentListIdRef.current = id
-      void Promise.all([getListMusics(id), getListPosition(id)]).then(([list, position]) => {
+      const positionPromise = isSaveScrollLocation ? getListPosition(id) : Promise.resolve(0)
+      void Promise.all([getListMusics(id), positionPromise]).then(([list, position]) => {
         requestAnimationFrame(() => {
           if (currentListIdRef.current != id) return
           selectedListRef.current = []
@@ -178,7 +181,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       global.app_event.off('myListMusicUpdate', handleChange)
       global.app_event.off('jumpListPosition', handleJumpPosition)
     }
-  }, [])
+  }, [isSaveScrollLocation])
 
   const activeIndex = usePlayIndex()
   const handlePlay = (index: number) => {
@@ -248,6 +251,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       listFirstScrollRef.current = false
       return
     }
+    if (!isSaveScrollLocation) return
     void saveListPosition(listState.activeListId, nativeEvent.contentOffset.y)
   }
   const handleScrollToCurrent = () => {
@@ -274,6 +278,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       rowInfo={rowInfo.current}
       isShowAlbumName={isShowAlbumName}
       isShowInterval={isShowInterval}
+      isShowSource={isShowSource}
     />
   )
   const getkey: FlatListType['keyExtractor'] = item => item.id

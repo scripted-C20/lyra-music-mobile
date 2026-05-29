@@ -24,7 +24,7 @@ export default {
   },
   setNavActiveId(id: InitState['navActiveId']) {
     state.navActiveId = id
-    if (id != 'nav_setting') state.lastNavActiveId = id
+    if (id != 'nav_setting' && id != 'nav_search') state.lastNavActiveId = id
     global.state_event.navActiveIdUpdated(id)
   },
   setLastNavActiveId(id: InitState['navActiveId']) {
@@ -39,4 +39,3 @@ export default {
     global.state_event.sourceNamesUpdated(names)
   },
 }
-

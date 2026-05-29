@@ -237,6 +237,11 @@ declare global {
       'desktopLyric.enable': boolean
 
       /**
+       * 是否使用状态栏/胶囊歌词预设
+       */
+      'desktopLyric.statusBarMode': boolean
+
+      /**
        * 是否锁定桌面歌词
        */
       'desktopLyric.isLock': boolean
@@ -305,6 +310,91 @@ declare global {
         * 桌面歌词字体阴影颜色
         */
       'desktopLyric.style.lyricShadowColor': string
+
+      /**
+       * 桌面歌词背景颜色
+       */
+      'desktopLyric.style.backgroundColor': string
+
+      /**
+       * 是否启用状态栏歌词
+       */
+      'statusBarLyric.enable': boolean
+
+      /**
+       * 是否锁定状态栏歌词
+       */
+      'statusBarLyric.isLock': boolean
+
+      /**
+       * 状态栏歌词窗口宽度
+       */
+      'statusBarLyric.width': number
+
+      /**
+       * 状态栏歌词最大行数
+       */
+      'statusBarLyric.maxLineNum': number
+
+      /**
+       * 状态栏歌词是否使用单行显示
+       */
+      'statusBarLyric.isSingleLine': boolean
+
+      /**
+       * 状态栏歌词是否启用歌词切换动画
+       */
+      'statusBarLyric.showToggleAnima': boolean
+
+      /**
+       * 状态栏歌词窗口x坐标
+       */
+      'statusBarLyric.position.x': number
+
+      /**
+       * 状态栏歌词窗口y坐标
+       */
+      'statusBarLyric.position.y': number
+
+      /**
+       * 状态栏歌词水平对齐方式
+       */
+      'statusBarLyric.textPosition.x': 'left' | 'center' | 'right'
+
+      /**
+       * 状态栏歌词垂直对齐方式
+       */
+      'statusBarLyric.textPosition.y': 'top' | 'center' | 'bottom'
+
+      /**
+       * 状态栏歌词字体大小
+       */
+      'statusBarLyric.style.fontSize': number
+
+      /**
+       * 状态栏歌词字体透明度
+       */
+      'statusBarLyric.style.opacity': number
+
+      /**
+       * 状态栏歌词未播放字体颜色
+       */
+      'statusBarLyric.style.lyricUnplayColor': string
+
+      /**
+        * 状态栏歌词已播放字体颜色
+        */
+      'statusBarLyric.style.lyricPlayedColor': string
+
+      /**
+        * 状态栏歌词字体阴影颜色
+        */
+      'statusBarLyric.style.lyricShadowColor': string
+
+      /**
+       * 状态栏歌词背景颜色
+       */
+      'statusBarLyric.style.backgroundColor': string
 
       /**
        * 是否显示热门搜索

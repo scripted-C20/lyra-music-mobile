@@ -30,7 +30,7 @@ const Main = () => {
       case 'nav_love': return <Mylist />
       case 'nav_setting': return <Setting />
       case 'nav_about': return <About />
-      case 'nav_search':
+      case 'nav_search': return <Search />
       default: return <Search />
     }
   }, [id])
