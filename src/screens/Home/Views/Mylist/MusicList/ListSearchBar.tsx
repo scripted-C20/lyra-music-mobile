@@ -1,0 +1,171 @@
+import { useState, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
+import { Animated, View, TouchableOpacity } from 'react-native'
+
+import Text from '@/components/common/Text'
+import Input, { type InputType } from '@/components/common/Input'
+
+import { useTheme } from '@/store/theme/hook'
+import { useI18n } from '@/lang'
+import { createStyle } from '@/utils/tools'
+
+interface SearchInputProps {
+  onSearch: (keywork: string) => void
+}
+type SearchInputType = InputType
+
+const SearchInput = forwardRef<SearchInputType, SearchInputProps>(({ onSearch }, ref) => {
+  const [text, setText] = useState('')
+
+  const handleChangeText = (text: string) => {
+    setText(text)
+    onSearch(text.trim())
+  }
+
+  return (
+    <Input
+      onChangeText={handleChangeText}
+      placeholder={global.i18n.t('search_placeholder')}
+      value={text}
+      style={styles.input}
+      // onFocus={showTipList}
+      clearBtn
+      ref={ref}
+    />
+  )
+})
+
+
+export interface ListSearchBarProps {
+  onSearch: (keywork: string) => void
+  onExitSearch: () => void
+}
+export interface ListSearchBarType {
+  show: () => void
+  hide: () => void
+}
+
+export default forwardRef<ListSearchBarType, ListSearchBarProps>(({ onSearch, onExitSearch }, ref) => {
+  const t = useI18n()
+  // const isGetDetailFailedRef = useRef(false)
+  const [visible, setVisible] = useState(false)
+  const [animatePlayed, setAnimatPlayed] = useState(true)
+  const animFade = useRef(new Animated.Value(0)).current
+  const animTranslateY = useRef(new Animated.Value(0)).current
+  const searchInputRef = useRef<SearchInputType>(null)
+
+  const theme = useTheme()
+
+  useImperativeHandle(ref, () => ({
+    show() {
+      handleShow()
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus()
+      })
+    },
+    hide() {
+      handleHide()
+    },
+  }))
+
+
+  const handleShow = useCallback(() => {
+    // console.log('show List')
+    setVisible(true)
+    setAnimatPlayed(false)
+    requestAnimationFrame(() => {
+      animTranslateY.setValue(-20)
+
+      Animated.parallel([
+        Animated.timing(animFade, {
+          toValue: 0.92,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animTranslateY, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setAnimatPlayed(true)
+      })
+    })
+  }, [animFade, animTranslateY])
+
+  const handleHide = useCallback(() => {
+    setAnimatPlayed(false)
+    Animated.parallel([
+      Animated.timing(animFade, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animTranslateY, {
+        toValue: -20,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(finished => {
+      if (!finished) return
+      setVisible(false)
+      setAnimatPlayed(true)
+    })
+  }, [animFade, animTranslateY])
+
+
+  const animaStyle = useMemo(() => ({
+    ...styles.container,
+    opacity: animFade, // Bind opacity to animated value
+    transform: [
+      { translateY: animTranslateY },
+    ],
+  }), [animFade, animTranslateY])
+
+  const component = useMemo(() => {
+    return (
+      <Animated.View style={animaStyle}>
+        <View style={{ ...styles.inner, backgroundColor: theme['c-main-background'], borderColor: theme['c-border-background'] }}>
+          <View style={styles.content}>
+            <SearchInput ref={searchInputRef} onSearch={onSearch} />
+          </View>
+          <TouchableOpacity onPress={onExitSearch} style={styles.btn}>
+            <Text color={theme['c-primary-font']}>{t('list_select_cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    )
+  }, [animaStyle, onSearch, onExitSearch, theme, t])
+
+  return !visible && animatePlayed ? null : component
+})
+
+const styles = createStyle({
+  container: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    top: 8,
+  },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingLeft: 14,
+    paddingRight: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+  },
+  content: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  input: {
+    height: 40,
+  },
+  btn: {
+    paddingLeft: 15,
+    paddingRight: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+})
