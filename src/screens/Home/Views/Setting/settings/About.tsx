@@ -11,7 +11,7 @@ import { useI18n } from '@/lang'
 import Text from '@/components/common/Text'
 import { showPactModal } from '@/core/common'
 
-const repoUrl = 'https://github.com/scripted-C20/-lyra-music-mobile'
+const repoUrl = 'https://github.com/scripted-C20/lyra-music-mobile'
 const repoReadmeUrl = `${repoUrl}#readme`
 const repoIssuesUrl = `${repoUrl}/issues?q=is%3Aissue+`
 const repoReleasesUrl = `${repoUrl}/releases`

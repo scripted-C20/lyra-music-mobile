@@ -6,7 +6,7 @@ import { openUrl } from '@/utils/tools'
 import { showPactModal } from '@/core/common'
 import { useDS } from '@/theme/useDS'
 
-const homePage = 'https://github.com/scripted-C20/-lyra-music-mobile#readme'
+const homePage = 'https://github.com/scripted-C20/lyra-music-mobile#readme'
 const faqPage = 'https://lyswhut.github.io/lx-music-doc/mobile/faq'
 
 export default () => {
