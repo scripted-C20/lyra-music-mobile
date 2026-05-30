@@ -6,7 +6,7 @@ import { openUrl } from '@/utils/tools'
 import { showPactModal } from '@/core/common'
 import { useDS } from '@/theme/useDS'
 
-const homePage = 'https://github.com/scripted-C20/lyra-music-mobile#readme'
+const homePage = 'https://github.com/scripted-C20/-lyra-music-mobile#readme'
 const faqPage = 'https://lyswhut.github.io/lx-music-doc/mobile/faq'
 
 export default () => {
@@ -22,7 +22,7 @@ export default () => {
             <Icon name="logo" size={18} color={ds.accent} />
           </View>
           <View style={styles.appInfo}>
-            <Text size={14} color={ds.text} style={styles.appName}>LX Music Mobile</Text>
+            <Text size={14} color={ds.text} style={styles.appName}>LY Music</Text>
             <Text size={11} color={ds.textDim}>v{process.versions.app}</Text>
           </View>
         </View>

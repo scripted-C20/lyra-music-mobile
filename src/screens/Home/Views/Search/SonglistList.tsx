@@ -5,11 +5,11 @@ import Songlist, { type SonglistProps, type SonglistType } from '@/screens/Home/
 import searchSonglistState, { type Source } from '@/store/search/songlist/state'
 import ResultHeader from './ResultHeader'
 
-export interface MusicListType {
+export interface SonglistListType {
   loadList: (text: string, source: Source) => void
 }
 
-export default forwardRef<MusicListType, {}>((props, ref) => {
+export default forwardRef<SonglistListType, {}>((props, ref) => {
   const listRef = useRef<SonglistType>(null)
   const searchInfoRef = useRef<{ text: string, source: Source }>({ text: '', source: 'kw' })
   const [headerInfo, setHeaderInfo] = useState<{ keyword: string, source: Source, total: number } | null>(null)

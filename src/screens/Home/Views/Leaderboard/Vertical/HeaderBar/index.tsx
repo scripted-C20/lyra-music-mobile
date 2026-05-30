@@ -6,11 +6,7 @@ import Text from '@/components/common/Text'
 import { Icon } from '@/components/common/Icon'
 import leaderboardState from '@/store/leaderboard/state'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HEIGHT,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_RADIUS,
-  HEADER_CONTROL_ROW_GAP,
+  useHeaderControlMetrics,
 } from '../../../common/headerControls'
 
 export interface HeaderBarProps {
@@ -28,6 +24,7 @@ export interface HeaderBarType {
 export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourceChange, onSelectBoard, onSearch, onPlayAll }, ref) => {
   const sourceSelectorRef = useRef<SourceSelectorType>(null)
   const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
   const [activeId, setActiveId] = useState('')
   const [boards, setBoards] = useState<Array<{ id: string, name: string }>>([])
   const [currentBoardName, setCurrentBoardName] = useState('')
@@ -84,11 +81,24 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
   const mutedChipBg = ds.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.92)'
   return (
     <View style={[styles.wrapper, { backgroundColor: ds.isDark ? ds.bg : 'rgba(249,249,249,0.98)' }]}>
-      <View style={styles.row}>
-        <View style={[styles.searchBox, { backgroundColor: mutedChipBg, borderColor: ds.separator }]}>
-          <Icon name="search-2" size={10} color={ds.textDim} />
+      <View style={[styles.row, { minHeight: controlMetrics.height, gap: controlMetrics.rowGap }]}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: mutedChipBg,
+              borderColor: ds.separator,
+              borderRadius: controlMetrics.radius,
+              paddingHorizontal: Math.max(6, controlMetrics.horizontalPadding),
+              height: controlMetrics.height,
+              gap: controlMetrics.gap,
+              width: controlMetrics.minSearchWidth,
+            },
+          ]}
+        >
+          <Icon name="search-2" size={controlMetrics.iconSize} color={ds.textDim} />
           <TextInput
-            style={[styles.searchInput, { color: ds.text }]}
+            style={[styles.searchInput, { color: ds.text, fontSize: controlMetrics.inputFontSize, height: controlMetrics.height - 2 }]}
             placeholder="搜索"
             placeholderTextColor={ds.textDim}
             value={searchText}
@@ -100,10 +110,21 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.controlsContent}
+          contentContainerStyle={[styles.controlsContent, { gap: controlMetrics.rowGap }]}
           style={styles.scroll}
         >
-          <View style={[styles.sourceChip, { backgroundColor: mutedChipBg, borderColor: ds.separator }]}>
+          <View
+            style={[
+              styles.sourceChip,
+              {
+                backgroundColor: mutedChipBg,
+                borderColor: ds.separator,
+                height: controlMetrics.height,
+                borderRadius: controlMetrics.radius,
+                width: Math.max(74, controlMetrics.minSearchWidth - 14),
+              },
+            ]}
+          >
             <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
           </View>
 
@@ -117,13 +138,20 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
                 onPress={() => { if (!active) handleSelectBoard(board.id) }}
                 style={[
                   styles.boardChip,
+                  {
+                    height: controlMetrics.height,
+                    minWidth: Math.max(52, controlMetrics.height * 2),
+                    maxWidth: Math.max(82, controlMetrics.height * 3),
+                    paddingHorizontal: controlMetrics.horizontalPadding,
+                    borderRadius: controlMetrics.radius,
+                  },
                   active
                     ? { backgroundColor: ds.accent, borderColor: ds.accent }
                     : { backgroundColor: chipBg, borderColor: ds.separator },
                 ]}
               >
                 <Text
-                  size={HEADER_CONTROL_FONT_SIZE}
+                  size={controlMetrics.fontSize}
                   color={active ? ds.textOnAccent : ds.text}
                   style={styles.boardText}
                   numberOfLines={1}
@@ -137,19 +165,35 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
         <View style={styles.rightActions}>
           {onPlayAll ? (
             <TouchableOpacity
-              style={[styles.iconChip, { backgroundColor: mutedChipBg }]}
+              style={[
+                styles.iconChip,
+                {
+                  backgroundColor: mutedChipBg,
+                  width: controlMetrics.height,
+                  height: controlMetrics.height,
+                  borderRadius: controlMetrics.radius,
+                },
+              ]}
               activeOpacity={0.6}
               onPress={onPlayAll}
             >
-              <Icon family="ionicons" name="play" size={12} color={ds.accent} />
+              <Icon family="ionicons" name="play" size={controlMetrics.actionIconSize} color={ds.accent} />
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
-            style={[styles.iconChip, { backgroundColor: mutedChipBg }]}
+            style={[
+              styles.iconChip,
+              {
+                backgroundColor: mutedChipBg,
+                width: controlMetrics.height,
+                height: controlMetrics.height,
+                borderRadius: controlMetrics.radius,
+              },
+            ]}
             activeOpacity={0.6}
             onPress={onShowBound}
           >
-            <Icon family="ionicons" name="list" size={13} color={ds.textMuted} />
+            <Icon family="ionicons" name="list" size={controlMetrics.actionIconSize + 1} color={ds.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -166,29 +210,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: HEADER_CONTROL_HEIGHT,
-    gap: HEADER_CONTROL_ROW_GAP,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: HEADER_CONTROL_RADIUS,
-    paddingHorizontal: 6,
-    height: HEADER_CONTROL_HEIGHT,
-    gap: 3,
-    width: 88,
     flexShrink: 0,
   },
   searchInput: {
     flex: 1,
-    fontSize: HEADER_CONTROL_FONT_SIZE,
     paddingVertical: 0,
-    height: HEADER_CONTROL_HEIGHT - 2,
   },
   sourceChip: {
-    height: HEADER_CONTROL_HEIGHT,
-    borderRadius: HEADER_CONTROL_RADIUS,
-    width: 74,
     flexShrink: 0,
   },
   scroll: {
@@ -197,15 +229,9 @@ const styles = StyleSheet.create({
   controlsContent: {
     alignItems: 'center',
     paddingRight: 2,
-    gap: HEADER_CONTROL_ROW_GAP,
   },
   boardChip: {
-    height: HEADER_CONTROL_HEIGHT,
-    minWidth: 52,
-    maxWidth: 82,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
     paddingVertical: 0,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -215,9 +241,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   iconChip: {
-    width: HEADER_CONTROL_HEIGHT,
-    height: HEADER_CONTROL_HEIGHT,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -225,7 +248,6 @@ const styles = StyleSheet.create({
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: HEADER_CONTROL_ROW_GAP,
     flexShrink: 0,
   },
 })

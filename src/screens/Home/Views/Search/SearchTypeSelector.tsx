@@ -7,9 +7,7 @@ import Text from '@/components/common/Text'
 import { useDS } from '@/theme/useDS'
 import { getSearchSetting } from '@/utils/data'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HEIGHT,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
+  useHeaderControlMetrics,
 } from '../common/headerControls'
 
 const SEARCH_TYPE_LIST = [
@@ -20,6 +18,7 @@ const SEARCH_TYPE_LIST = [
 export default () => {
   const t = useI18n()
   const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
   const [type, setType] = useState<SearchType>('music')
 
   useEffect(() => {
@@ -38,20 +37,25 @@ export default () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: controlMetrics.height }]}>
       {list.map(item => {
         const active = type === item.id
         return (
           <TouchableOpacity
             style={[
               styles.btn,
+              {
+                height: controlMetrics.height,
+                paddingHorizontal: controlMetrics.horizontalPadding,
+                paddingVertical: controlMetrics.verticalPadding,
+              },
               active && { backgroundColor: ds.accent },
             ]}
             onPress={() => { handleTypeChange(item.id) }}
             key={item.id}
           >
             <Text
-              size={HEADER_CONTROL_FONT_SIZE}
+              size={controlMetrics.fontSize}
               color={active ? ds.textOnAccent : ds.text}
               style={styles.text}
               numberOfLines={1}
@@ -69,12 +73,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: HEADER_CONTROL_HEIGHT,
   },
   btn: {
-    height: HEADER_CONTROL_HEIGHT,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: 0,
     borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',

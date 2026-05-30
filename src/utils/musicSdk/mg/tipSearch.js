@@ -13,11 +13,12 @@ export default {
       },
     })
     return this.requestObj.then(body => {
-      return body.songs
+      return body?.songs ?? []
     })
   },
   handleResult(rawData) {
-    return rawData.map(info => `${info.name} - ${info.singerName}`)
+    if (!Array.isArray(rawData)) return []
+    return rawData.map(info => `${info.name || ''}${info.singerName ? ` - ${info.singerName}` : ''}`.trim()).filter(Boolean)
   },
   async search(str) {
     return this.tipSearchBySong(str).then(result => this.handleResult(result))

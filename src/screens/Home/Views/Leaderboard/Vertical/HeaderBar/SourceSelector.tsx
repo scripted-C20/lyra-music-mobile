@@ -8,10 +8,7 @@ import { useI18n } from '@/lang'
 import { useSettingValue } from '@/store/setting/hook'
 import leaderboardState, { type Source } from '@/store/leaderboard/state'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_GAP,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from '../../../common/headerControls'
 
 export interface SourceSelectorProps {
@@ -26,6 +23,7 @@ export interface SourceSelectorType {
 export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onSourceChange }, ref) => {
   const ds = useDS()
   const t = useI18n()
+  const controlMetrics = useHeaderControlMetrics()
   const sourceNameType = useSettingValue('common.sourceNameType')
   const wrapperRef = useRef<View>(null)
   const menuRef = useRef<MenuType>(null)
@@ -49,7 +47,7 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
         if (Number.isNaN(x) || Number.isNaN(y)) return
         menuRef.current?.show(
           { x: Math.ceil(x), y: Math.ceil(y), w: Math.ceil(width), h: Math.ceil(height) },
-          { width: 90, height: 32 },
+          { width: controlMetrics.menuWidth, height: controlMetrics.menuHeight },
         )
       })
     }, 0)
@@ -64,20 +62,31 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
 
   return (
     <View ref={wrapperRef} style={[styles.wrapper, style]} collapsable={false}>
-      <TouchableOpacity style={styles.btn} activeOpacity={0.6} onPress={handleShow}>
-        <Text size={HEADER_CONTROL_FONT_SIZE} color={ds.accent} style={styles.text} numberOfLines={1}>
+      <TouchableOpacity
+        style={[
+          styles.btn,
+          {
+            paddingHorizontal: controlMetrics.horizontalPadding,
+            paddingVertical: controlMetrics.verticalPadding,
+            gap: controlMetrics.gap,
+          },
+        ]}
+        activeOpacity={0.6}
+        onPress={handleShow}
+      >
+        <Text size={controlMetrics.fontSize} color={ds.accent} style={styles.text} numberOfLines={1}>
           {sourceLabel}
         </Text>
-        <Icon family="ionicons" name="chevron-down" size={10} color={ds.accent} style={styles.icon} />
+        <Icon family="ionicons" name="chevron-down" size={controlMetrics.iconSize} color={ds.accent} style={styles.icon} />
       </TouchableOpacity>
       <Menu
         ref={menuRef}
         menus={menus}
         onPress={handlePress}
         activeId={source}
-        fontSize={HEADER_CONTROL_FONT_SIZE}
-        height={32}
-        width={90}
+        fontSize={controlMetrics.fontSize}
+        height={controlMetrics.menuHeight}
+        width={controlMetrics.menuWidth}
         center
       />
     </View>
@@ -95,9 +104,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
-    gap: HEADER_CONTROL_GAP,
   },
   text: {
     fontWeight: '500',

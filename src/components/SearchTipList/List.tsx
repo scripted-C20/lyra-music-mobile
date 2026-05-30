@@ -13,13 +13,17 @@ export type ListProps<T> = Pick<FlatListProps<T>,
 | 'keyExtractor'
 | 'getItemLayout'
 | 'keyboardShouldPersistTaps'
->
+| 'ListHeaderComponent'
+| 'contentContainerStyle'
+> & {
+  list?: T[]
+}
 
 export interface ListType<T> {
   setList: (list: T[]) => void
 }
 
-const List = <T extends ItemT<T>>(props: ListProps<T>, ref: Ref<ListType<T>>) => {
+const List = <T extends ItemT<T>>({ list: controlledList, ...props }: ListProps<T>, ref: Ref<ListType<T>>) => {
   const [list, setList] = useState<T[]>([])
   useImperativeHandle(ref, () => ({
     setList(list) {
@@ -27,10 +31,8 @@ const List = <T extends ItemT<T>>(props: ListProps<T>, ref: Ref<ListType<T>>) =>
     },
   }))
 
-  return <FlatList removeClippedSubviews={true} keyboardShouldPersistTaps={'always'} {...props} data={list} />
+  return <FlatList removeClippedSubviews={true} keyboardShouldPersistTaps={'always'} {...props} data={controlledList ?? list} />
 }
 
 export default forwardRef(List) as
   <M,>(p: ListProps<M> & { ref?: Ref<ListType<M>> }) => JSX.Element | null
-
-

@@ -9,9 +9,7 @@ import { useDS } from '@/theme/useDS'
 import { useI18n } from '@/lang'
 import { resolveListDetailId } from '@/core/songlist'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from '../constants'
 
 export interface OpenListType {
@@ -23,6 +21,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   const songlistInfoRef = useRef<{ source: Source }>({ source: 'kw' })
   const ds = useDS()
   const t = useI18n()
+  const controlMetrics = useHeaderControlMetrics()
 
   useImperativeHandle(ref, () => ({
     setInfo(source) {
@@ -46,11 +45,17 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   return (
     <>
       <TouchableOpacity
-        style={styles.btn}
+        style={[
+          styles.btn,
+          {
+            paddingHorizontal: controlMetrics.horizontalPadding,
+            paddingVertical: controlMetrics.verticalPadding,
+          },
+        ]}
         activeOpacity={0.6}
         onPress={() => modalRef.current?.show(songlistInfoRef.current.source)}
       >
-        <Text size={HEADER_CONTROL_FONT_SIZE} color={ds.text} style={styles.text} numberOfLines={1}>
+        <Text size={controlMetrics.fontSize} color={ds.text} style={styles.text} numberOfLines={1}>
           {t('songlist_add') || '添加'}
         </Text>
       </TouchableOpacity>
@@ -65,8 +70,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
   },
   text: {
     fontWeight: '400',

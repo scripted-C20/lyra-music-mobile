@@ -2,9 +2,7 @@ import { TouchableOpacity, StyleSheet } from 'react-native'
 import Text from '@/components/common/Text'
 import { useDS } from '@/theme/useDS'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from '../constants'
 
 export interface CurrentTagBtnProps {
@@ -14,11 +12,22 @@ export interface CurrentTagBtnProps {
 
 export default ({ name, onShowList }: CurrentTagBtnProps) => {
   const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
   const label = name?.trim() && name !== '默认' ? name : '筛选'
 
   return (
-    <TouchableOpacity style={styles.btn} activeOpacity={0.6} onPress={onShowList}>
-      <Text size={HEADER_CONTROL_FONT_SIZE} color={ds.text} style={styles.text} numberOfLines={1}>
+    <TouchableOpacity
+      style={[
+        styles.btn,
+        {
+          paddingHorizontal: controlMetrics.horizontalPadding,
+          paddingVertical: controlMetrics.verticalPadding,
+        },
+      ]}
+      activeOpacity={0.6}
+      onPress={onShowList}
+    >
+      <Text size={controlMetrics.fontSize} color={ds.text} style={styles.text} numberOfLines={1}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -31,8 +40,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
   },
   text: {
     fontWeight: '400',

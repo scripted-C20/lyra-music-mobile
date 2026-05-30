@@ -9,11 +9,7 @@ import { LIST_IDS } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { useDS } from '@/theme/useDS'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HEIGHT,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_RADIUS,
-  HEADER_CONTROL_ROW_GAP,
+  useHeaderControlMetrics,
 } from '../../common/headerControls'
 
 export interface ActiveListProps {
@@ -31,6 +27,7 @@ const truncate = (str: string) => str.length > 4 ? str.slice(0, 4) + '…' : str
 
 export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScrollToTop, onPlayAll, onNew }, ref) => {
   const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
   const currentListId = useActiveListId()
   const allLists = useMyList()
   const langId = useSettingValue('common.langId')
@@ -84,12 +81,24 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScroll
   const chipBg = ds.isDark ? ds.bgFloat : '#FFFFFF'
   return (
     <View style={[styles.wrapper, { backgroundColor: ds.isDark ? ds.bg : 'rgba(249,249,249,0.98)' }]}>
-      <View style={styles.row}>
-        <View style={[styles.searchBox, { backgroundColor: chipBg }]}>
-          <Icon name="search-2" size={10} color={ds.textDim} />
+      <View style={[styles.row, { minHeight: controlMetrics.height, gap: controlMetrics.rowGap }]}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: chipBg,
+              borderRadius: controlMetrics.radius,
+              paddingHorizontal: Math.max(6, controlMetrics.horizontalPadding),
+              height: controlMetrics.height,
+              gap: controlMetrics.gap,
+              width: controlMetrics.minSearchWidth,
+            },
+          ]}
+        >
+          <Icon name="search-2" size={controlMetrics.iconSize} color={ds.textDim} />
           <TextInput
             ref={inputRef}
-            style={[styles.searchInput, { color: ds.text }]}
+            style={[styles.searchInput, { color: ds.text, fontSize: controlMetrics.inputFontSize, height: controlMetrics.height - 2 }]}
             placeholder="搜索"
             placeholderTextColor={ds.textDim}
             value={searchText}
@@ -97,8 +106,8 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScroll
             returnKeyType="search"
           />
           {searchText.length > 0 && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
-              <Icon name="close" size={10} color={ds.textDim} />
+            <TouchableOpacity onPress={handleClear} style={[styles.clearBtn, { width: controlMetrics.clearButtonSize, height: controlMetrics.clearButtonSize }]}>
+              <Icon name="close" size={controlMetrics.clearIconSize} color={ds.textDim} />
             </TouchableOpacity>
           )}
         </View>
@@ -106,15 +115,23 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScroll
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { gap: controlMetrics.rowGap }]}
           style={styles.scroll}
         >
           <TouchableOpacity
-            style={[styles.chip, { backgroundColor: chipBg }]}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: chipBg,
+                height: controlMetrics.height,
+                borderRadius: controlMetrics.radius,
+                paddingHorizontal: controlMetrics.horizontalPadding,
+              },
+            ]}
             activeOpacity={0.6}
             onPress={onNew}
           >
-            <Text size={HEADER_CONTROL_FONT_SIZE} color={ds.text} style={styles.chipText}>新建歌单</Text>
+            <Text size={controlMetrics.fontSize} color={ds.text} style={styles.chipText}>新建歌单</Text>
           </TouchableOpacity>
 
           {scrollLists.map(list => {
@@ -126,11 +143,17 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScroll
                 onPress={() => { handleSelectList(list.id) }}
                 style={[
                   styles.listChip,
+                  {
+                    height: controlMetrics.height,
+                    paddingHorizontal: controlMetrics.horizontalPadding,
+                    borderRadius: controlMetrics.radius,
+                    maxWidth: Math.max(70, controlMetrics.height * 3),
+                  },
                   active ? { backgroundColor: ds.accent } : { backgroundColor: chipBg },
                 ]}
               >
                 <Text
-                  size={HEADER_CONTROL_FONT_SIZE}
+                  size={controlMetrics.fontSize}
                   color={active ? ds.textOnAccent : ds.text}
                   style={styles.listChipText}
                   numberOfLines={1}
@@ -143,18 +166,34 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onSearch, onScroll
         </ScrollView>
         <View style={styles.rightActions}>
           <TouchableOpacity
-            style={[styles.iconChip, { backgroundColor: chipBg }]}
+            style={[
+              styles.iconChip,
+              {
+                backgroundColor: chipBg,
+                width: controlMetrics.height,
+                height: controlMetrics.height,
+                borderRadius: controlMetrics.radius,
+              },
+            ]}
             activeOpacity={0.6}
             onPress={onPlayAll}
           >
-            <Icon family="ionicons" name="play-outline" size={12} color={ds.accent} />
+            <Icon family="ionicons" name="play-outline" size={controlMetrics.actionIconSize} color={ds.accent} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.iconChip, { backgroundColor: chipBg }]}
+            style={[
+              styles.iconChip,
+              {
+                backgroundColor: chipBg,
+                width: controlMetrics.height,
+                height: controlMetrics.height,
+                borderRadius: controlMetrics.radius,
+              },
+            ]}
             activeOpacity={0.6}
             onPress={() => { global.app_event.changeLoveListVisible(true) }}
           >
-            <Icon family="ionicons" name="menu" size={12} color={ds.textMuted} />
+            <Icon family="ionicons" name="menu" size={controlMetrics.actionIconSize} color={ds.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -171,39 +210,25 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: HEADER_CONTROL_HEIGHT,
-    gap: HEADER_CONTROL_ROW_GAP,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: HEADER_CONTROL_RADIUS,
-    paddingHorizontal: 6,
-    height: HEADER_CONTROL_HEIGHT,
-    gap: 3,
-    width: 88,
     flexShrink: 0,
   },
   searchInput: {
     flex: 1,
-    fontSize: HEADER_CONTROL_FONT_SIZE,
     paddingVertical: 0,
     fontWeight: '400',
-    height: HEADER_CONTROL_HEIGHT - 2,
   },
   clearBtn: {
-    width: 16,
-    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chip: {
-    height: HEADER_CONTROL_HEIGHT,
-    borderRadius: HEADER_CONTROL_RADIUS,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
     paddingVertical: 0,
     flexShrink: 0,
   },
@@ -212,22 +237,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     alignItems: 'center',
     paddingRight: 2,
-    gap: HEADER_CONTROL_ROW_GAP,
   },
   listChip: {
-    height: HEADER_CONTROL_HEIGHT,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
     paddingVertical: 0,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: 70,
   },
   listChipText: { fontWeight: '400' },
   iconChip: {
-    width: HEADER_CONTROL_HEIGHT,
-    height: HEADER_CONTROL_HEIGHT,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -235,7 +252,6 @@ const styles = StyleSheet.create({
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: HEADER_CONTROL_ROW_GAP,
     flexShrink: 0,
   },
 })

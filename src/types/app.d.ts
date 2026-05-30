@@ -30,6 +30,8 @@ interface GlobalData {
   restorePlayInfo: LX.Player.SavedPlayInfo | null
   isScreenKeepAwake: boolean
   isPlayedStop: boolean
+  isPlayTaskPending: boolean
+  isPlayTaskCanceled: boolean
   isEnableSyncLog: boolean
   isEnableUserApiLog: boolean
   playerTrackId: string
@@ -39,6 +41,9 @@ interface GlobalData {
   apiInitPromise: [Promise<boolean>, boolean, (success: boolean) => void]
 
   jumpMyListPosition: boolean
+
+  isSonglistDetailFromSearch: boolean
+  shouldClearSearchOnOpen: boolean
 
   settingActiveId: SettingScreenIds
 

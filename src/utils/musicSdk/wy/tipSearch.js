@@ -21,11 +21,12 @@ export default {
     })
     return this.requestObj.promise.then(({ statusCode, body }) => {
       if (statusCode != 200 || body.code != 200) return Promise.reject(new Error('请求失败'))
-      return body.result.songs
+      return body.result?.songs ?? []
     })
   },
   handleResult(rawData) {
-    return rawData.map(info => `${info.name} - ${formatSingerName(info.artists, 'name')}`)
+    if (!Array.isArray(rawData)) return []
+    return rawData.map(info => `${info.name || ''}${info.artists?.length ? ` - ${formatSingerName(info.artists, 'name')}` : ''}`.trim()).filter(Boolean)
   },
   async search(str) {
     return this.tipSearchBySong(str).then(result => this.handleResult(result))

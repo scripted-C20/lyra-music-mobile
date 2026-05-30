@@ -8,15 +8,7 @@ import songlistState from '@/store/songlist/state'
 import { useListInfo } from './state'
 import { useDS } from '@/theme/useDS'
 import {
-  ACTION_CONTROL_FONT_SIZE,
-  ACTION_ICON_BTN_RADIUS,
-  ACTION_ICON_BTN_SIZE,
-  ACTION_RAIL_GAP,
-  ACTION_RAIL_PADDING,
-  ACTION_ROW_GAP,
-  ACTION_SEARCH_HEIGHT,
-  ACTION_SEARCH_ICON_SIZE,
-  ACTION_SEARCH_RADIUS,
+  useActionBarMetrics,
 } from '@/components/common/actionBarTokens'
 
 export interface ActionBarProps {
@@ -27,6 +19,7 @@ export interface ActionBarProps {
 export default memo(({ searchText, onSearch }: ActionBarProps) => {
   const ds = useDS()
   const info = useListInfo()
+  const metrics = useActionBarMetrics()
 
   const back = () => {
     void pop(commonState.componentIds.songlistDetail!)
@@ -51,11 +44,21 @@ export default memo(({ searchText, onSearch }: ActionBarProps) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.primaryRow}>
-        <View style={[styles.searchBox, { backgroundColor: searchBg }]}>
-          <Icon name="search-2" size={ACTION_SEARCH_ICON_SIZE} color={ds.textDim} />
+      <View style={[styles.primaryRow, { gap: metrics.rowGap }]}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: searchBg,
+              minHeight: metrics.searchHeight,
+              borderRadius: metrics.searchRadius,
+              gap: Math.max(5, metrics.railGap),
+            },
+          ]}
+        >
+          <Icon name="search-2" size={metrics.searchIconSize} color={ds.textDim} />
           <TextInput
-            style={[styles.searchInput, { color: ds.text }]}
+            style={[styles.searchInput, { color: ds.text, fontSize: metrics.inputFontSize, height: metrics.searchHeight - 4 }]}
             placeholder="搜索当前列表"
             placeholderTextColor={ds.textDim}
             value={searchText}
@@ -63,21 +66,33 @@ export default memo(({ searchText, onSearch }: ActionBarProps) => {
             returnKeyType="search"
           />
           {searchText ? (
-            <TouchableOpacity activeOpacity={0.7} onPress={handleClear} style={styles.clearBtn}>
-              <Icon name="close" size={10} color={ds.textDim} />
+            <TouchableOpacity activeOpacity={0.7} onPress={handleClear} style={[styles.clearBtn, { width: metrics.clearButtonSize, height: metrics.clearButtonSize }]}>
+              <Icon name="close" size={metrics.clearIconSize} color={ds.textDim} />
             </TouchableOpacity>
           ) : null}
         </View>
 
-        <View style={[styles.actionRail, { backgroundColor: railBg, borderColor: ds.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)' }]}>
-          <TouchableOpacity activeOpacity={0.8} onPress={handlePlayAll} style={[styles.iconBtn, styles.iconBtnActive, { backgroundColor: ds.accent }]}>
-            <Icon name="play-outline" size={14} color={ds.textOnAccent} />
+        <View
+          style={[
+            styles.actionRail,
+            {
+              backgroundColor: railBg,
+              borderColor: ds.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)',
+              borderRadius: metrics.searchRadius,
+              paddingHorizontal: metrics.railPadding,
+              paddingVertical: metrics.railPadding,
+              gap: metrics.railGap,
+            },
+          ]}
+        >
+          <TouchableOpacity activeOpacity={0.8} onPress={handlePlayAll} style={[styles.iconBtn, styles.iconBtnActive, { backgroundColor: ds.accent, width: metrics.iconBtnSize, height: metrics.iconBtnSize, borderRadius: metrics.iconBtnRadius }]}>
+            <Icon name="play-outline" size={metrics.actionIconSize + 2} color={ds.textOnAccent} />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={handleCollection} style={styles.iconBtn}>
-            <Icon name="love" size={13} color={ds.textMuted} />
+          <TouchableOpacity activeOpacity={0.8} onPress={handleCollection} style={[styles.iconBtn, { width: metrics.iconBtnSize, height: metrics.iconBtnSize, borderRadius: metrics.iconBtnRadius }]}>
+            <Icon name="love" size={metrics.actionIconSize + 1} color={ds.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={back} style={styles.iconBtn}>
-            <Icon name="back-2" size={13} color={ds.textMuted} />
+          <TouchableOpacity activeOpacity={0.8} onPress={back} style={[styles.iconBtn, { width: metrics.iconBtnSize, height: metrics.iconBtnSize, borderRadius: metrics.iconBtnRadius }]}>
+            <Icon name="back-2" size={metrics.actionIconSize + 1} color={ds.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -93,43 +108,28 @@ const styles = StyleSheet.create({
   primaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ACTION_ROW_GAP,
   },
   searchBox: {
     flex: 1,
-    minHeight: ACTION_SEARCH_HEIGHT,
-    borderRadius: ACTION_SEARCH_RADIUS,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 10,
     paddingRight: 8,
-    gap: 5,
   },
   searchInput: {
     flex: 1,
-    fontSize: ACTION_CONTROL_FONT_SIZE,
     paddingVertical: 0,
-    height: ACTION_SEARCH_HEIGHT - 4,
   },
   clearBtn: {
-    width: 18,
-    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionRail: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: ACTION_SEARCH_RADIUS,
     borderWidth: 1,
-    paddingHorizontal: ACTION_RAIL_PADDING,
-    paddingVertical: ACTION_RAIL_PADDING,
-    gap: ACTION_RAIL_GAP,
   },
   iconBtn: {
-    width: ACTION_ICON_BTN_SIZE,
-    height: ACTION_ICON_BTN_SIZE,
-    borderRadius: ACTION_ICON_BTN_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },

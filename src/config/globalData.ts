@@ -40,6 +40,10 @@ global.lx = {
   // 是否播放完后退出应用
   isPlayedStop: false,
 
+  // 当前播放意图是否处于取链/等待/自动切歌阶段
+  isPlayTaskPending: false,
+  isPlayTaskCanceled: false,
+
   // prevListPlayIndex: -1,
 
   // syncKeyInfo: {},
@@ -56,6 +60,10 @@ global.lx = {
   apiInitPromise: [Promise.resolve(false), true, () => {}],
 
   jumpMyListPosition: false,
+
+  isSonglistDetailFromSearch: false,
+
+  shouldClearSearchOnOpen: false,
 
   settingActiveId: 'basic',
 

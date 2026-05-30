@@ -8,7 +8,7 @@ import SourceSelector, {
 import songlistState, { type Source } from '@/store/songlist/state'
 import Tag, { type TagProps } from './Tag'
 import OpenList, { type OpenListType } from './OpenList'
-import { HEADER_CONTROL_HEIGHT, HEADER_CONTROL_RADIUS } from './constants'
+import { useHeaderControlMetrics } from './constants'
 
 export interface HeaderBarProps {
   onSortChange: (id: string) => void
@@ -23,6 +23,7 @@ export interface HeaderBarType {
 export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagChange, onSourceChange }, ref) => {
   const openListRef = useRef<OpenListType>(null)
   const sourceSelectorRef = useRef<SourceSelectorType>(null)
+  const controlMetrics = useHeaderControlMetrics()
   const [meta, setMeta] = useState<{ source: Source, sortId: string, tagName: string, tagId: string }>({
     source: 'kw',
     sortId: songlistState.sortList.kw?.[0]?.id ?? '',
@@ -61,24 +62,24 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.row}>
+      <View style={[styles.row, { minHeight: controlMetrics.height, gap: controlMetrics.rowGap }]}>
         {/* 排序（最新/最热） */}
-        <View style={styles.chip}>
+        <View style={[styles.chip, { height: controlMetrics.height, borderRadius: controlMetrics.radius }]}>
           <SortTab source={meta.source} activeId={meta.sortId} onSortChange={handleSortChange} />
         </View>
 
         {/* 筛选 */}
-        <View style={styles.chip}>
+        <View style={[styles.chip, { height: controlMetrics.height, borderRadius: controlMetrics.radius }]}>
           <Tag source={meta.source} activeId={meta.tagId} name={meta.tagName} onTagChange={handleTagChange} />
         </View>
 
         {/* 添加歌单 */}
-        <View style={styles.chip}>
+        <View style={[styles.chip, { height: controlMetrics.height, borderRadius: controlMetrics.radius }]}>
           <OpenList ref={openListRef} />
         </View>
 
         {/* 来源下拉（右侧） */}
-        <View style={styles.chip}>
+        <View style={[styles.chip, { height: controlMetrics.height, borderRadius: controlMetrics.radius }]}>
           <SourceSelector
             ref={sourceSelectorRef}
             onSourceChange={handleSourceChange}
@@ -100,14 +101,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: HEADER_CONTROL_HEIGHT,
-    gap: 4,
   },
   chip: {
     flex: 1,
-    height: HEADER_CONTROL_HEIGHT,
     minWidth: 0,
-    borderRadius: HEADER_CONTROL_RADIUS,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',

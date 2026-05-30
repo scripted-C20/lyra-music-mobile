@@ -178,6 +178,14 @@ export class AppEvent extends Event {
     this.emit('topNavSearchTextUpdate', text)
   }
 
+  topNavSearchTextChange(text: string) {
+    this.emit('topNavSearchTextChange', text)
+  }
+
+  topNavSearchOpen() {
+    this.emit('topNavSearchOpen')
+  }
+
   jumpListPosition() {
     if (commonState.navActiveId == 'nav_love') {
       this.emit('jumpListPosition')

@@ -18,12 +18,13 @@ export default {
     })
   },
   handleResult(rawData) {
-    return rawData.map(info => `${info.name} - ${info.singer}`)
+    if (!Array.isArray(rawData)) return []
+    return rawData.map(info => `${info.name || ''}${info.singer ? ` - ${info.singer}` : ''}`.trim()).filter(Boolean)
   },
   cancelTipSearch() {
     if (this.requestObj && this.requestObj.cancelHttp) this.requestObj.cancelHttp()
   },
   async search(str) {
-    return this.tipSearch(str).then(result => this.handleResult(result.song.itemlist))
+    return this.tipSearch(str).then(result => this.handleResult(result?.song?.itemlist ?? []))
   },
 }

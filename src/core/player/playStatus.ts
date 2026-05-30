@@ -13,6 +13,24 @@ export const setStatusText = (val: string) => {
   playerActions.setStatusText(val)
 }
 
+export const setPlayTaskPending = (val: boolean) => {
+  global.lx.isPlayTaskPending = val
+}
+
+export const setPlayTaskCanceled = (val: boolean) => {
+  global.lx.isPlayTaskCanceled = val
+}
+
+export const resetPlayTaskState = () => {
+  global.lx.isPlayTaskPending = false
+  global.lx.isPlayTaskCanceled = false
+}
+
+export const cancelPlayTaskState = () => {
+  global.lx.isPlayTaskPending = false
+  global.lx.isPlayTaskCanceled = true
+}
+
 const normalizeStatusText = (text: string) => text.replace(/\d+/g, '').replace(/\s+/g, ' ').trim()
 
 type PendingStatusKey =
@@ -30,16 +48,19 @@ const matchStatusText = (statusText: string, key: PendingStatusKey, params?: Rec
 }
 
 export const isPlayerLoading = (statusText: string = playerState.statusText) => {
+  if (!playerState.isPlay && global.lx.isPlayTaskPending) return true
   if (global.lx.gettingUrlId) return true
   return matchStatusText(statusText, 'player__getting_url') ||
     matchStatusText(statusText, 'player__getting_url_delay_retry', { time: 0 }) ||
     matchStatusText(statusText, 'player__loading') ||
     matchStatusText(statusText, 'player__refresh_url') ||
     matchStatusText(statusText, 'player__buffering') ||
-    matchStatusText(statusText, 'toggle_source_try')
+    matchStatusText(statusText, 'toggle_source_try') ||
+    matchStatusText(statusText, 'player__error')
 }
 
 export const canCancelPendingPlayTask = (statusText: string = playerState.statusText) => {
+  if (!playerState.isPlay && global.lx.isPlayTaskPending) return true
   if (global.lx.gettingUrlId) return true
   return matchStatusText(statusText, 'player__getting_url') ||
     matchStatusText(statusText, 'player__getting_url_delay_retry', { time: 0 }) ||

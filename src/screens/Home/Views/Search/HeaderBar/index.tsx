@@ -8,12 +8,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import { useI18n } from '@/lang'
 import SearchTypeSelector from '../SearchTypeSelector'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HEIGHT,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_RADIUS,
-  HEADER_CONTROL_ROW_GAP,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from '../../common/headerControls'
 
 type Sources = Readonly<Array<MusicSource | SonglistSource>>
@@ -31,6 +26,7 @@ export interface HeaderBarType {
 export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSourceChange }, ref) => {
   const ds = useDS()
   const t = useI18n()
+  const controlMetrics = useHeaderControlMetrics()
   const sourceNameType = useSettingValue('common.sourceNameType')
   const [sourceList, setSourceList] = useState<Sources>([])
   const [activeSource, setActiveSource] = useState<Sources[number]>('kw')
@@ -53,9 +49,9 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSourceChange }, re
 
   return (
     <View style={[styles.wrapper, { backgroundColor: ds.isDark ? ds.bg : 'rgba(249,249,249,0.98)' }]}>
-      <View style={styles.row}>
+      <View style={[styles.row, { minHeight: controlMetrics.height, gap: controlMetrics.rowGap }]}>
         {/* 左：歌曲/歌单切换（固定） */}
-        <View style={[styles.typeChip, { backgroundColor: chipBg }]}>
+        <View style={[styles.typeChip, { backgroundColor: chipBg, height: controlMetrics.height, borderRadius: controlMetrics.radius }]}>
           <SearchTypeSelector />
         </View>
 
@@ -63,7 +59,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSourceChange }, re
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { gap: controlMetrics.rowGap }]}
           style={styles.scroll}
         >
           {sourceList.map(source => {
@@ -75,11 +71,17 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSourceChange }, re
                 onPress={() => { handleSourceChange(source) }}
                 style={[
                   styles.chip,
+                  {
+                    height: controlMetrics.height,
+                    paddingHorizontal: controlMetrics.horizontalPadding,
+                    paddingVertical: controlMetrics.verticalPadding,
+                    borderRadius: controlMetrics.radius,
+                  },
                   active ? { backgroundColor: ds.accent } : { backgroundColor: chipBg },
                 ]}
               >
                 <Text
-                  size={HEADER_CONTROL_FONT_SIZE}
+                  size={controlMetrics.fontSize}
                   color={active ? ds.textOnAccent : ds.text}
                   style={styles.chipText}
                   numberOfLines={1}
@@ -104,20 +106,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: HEADER_CONTROL_HEIGHT,
-    gap: HEADER_CONTROL_ROW_GAP,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     alignItems: 'center',
-    gap: HEADER_CONTROL_ROW_GAP,
     paddingRight: 4,
   },
   typeChip: {
-    height: HEADER_CONTROL_HEIGHT,
-    borderRadius: HEADER_CONTROL_RADIUS,
     justifyContent: 'center',
     overflow: 'hidden',
     paddingHorizontal: 0,
@@ -125,10 +122,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   chip: {
-    height: HEADER_CONTROL_HEIGHT,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },

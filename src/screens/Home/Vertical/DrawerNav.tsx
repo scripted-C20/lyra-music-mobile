@@ -29,7 +29,7 @@ const Header = () => {
           <Icon name="logo" color={ds.accent} size={28} />
         </View>
         <View style={styles.brandText}>
-          <Text style={[styles.brandName, { color: ds.text }]}>LX Music</Text>
+          <Text style={[styles.brandName, { color: ds.text }]}>LY Music</Text>
           <Text size={13} color={ds.textMuted} style={styles.brandSub}>
             {t('home_drawer_desc')}
           </Text>

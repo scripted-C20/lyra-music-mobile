@@ -5,10 +5,7 @@ import { useI18n } from '@/lang'
 import { useDS } from '@/theme/useDS'
 import Text from '@/components/common/Text'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_RADIUS,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from './constants'
 
 export interface SortTabProps {
@@ -20,6 +17,7 @@ export interface SortTabProps {
 export default ({ source, activeId, onSortChange }: SortTabProps) => {
   const t = useI18n()
   const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
   const scrollViewRef = useRef<ScrollView>(null)
 
   const sorts = useMemo(() => {
@@ -40,7 +38,10 @@ export default ({ source, activeId, onSortChange }: SortTabProps) => {
     <ScrollView
       ref={scrollViewRef}
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingHorizontal: Math.max(2, Math.round(controlMetrics.horizontalPadding / 2)) },
+      ]}
       keyboardShouldPersistTaps={'always'}
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -51,13 +52,21 @@ export default ({ source, activeId, onSortChange }: SortTabProps) => {
           <TouchableOpacity
             style={[
               styles.btn,
+              {
+                minHeight: Math.max(20, controlMetrics.height - 4),
+                minWidth: Math.max(34, controlMetrics.height + controlMetrics.horizontalPadding),
+                paddingHorizontal: controlMetrics.horizontalPadding,
+                paddingVertical: controlMetrics.verticalPadding,
+                borderRadius: controlMetrics.radius,
+                marginRight: Math.max(2, Math.round(controlMetrics.rowGap / 2)),
+              },
               active && { backgroundColor: ds.accent },
             ]}
             onPress={() => { handleSortChange(s.id) }}
             key={s.id}
           >
             <Text
-              size={HEADER_CONTROL_FONT_SIZE}
+              size={controlMetrics.fontSize}
               color={active ? ds.textOnAccent : ds.text}
               style={styles.text}
               numberOfLines={1}
@@ -74,18 +83,11 @@ export default ({ source, activeId, onSortChange }: SortTabProps) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
-    paddingHorizontal: 4,
     alignItems: 'center',
   },
   btn: {
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 20,
-    minWidth: 34,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
-    borderRadius: HEADER_CONTROL_RADIUS,
-    marginRight: 2,
   },
   text: {
     fontWeight: '400',

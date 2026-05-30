@@ -1,6 +1,11 @@
 import { isInitialized, initial as playerInitial, isEmpty, setPause, setPlay, setResource, setStop, initTrackInfo } from '@/plugins/player'
 import {
   canCancelPendingPlayTask,
+  cancelPlayTaskState,
+  resetPlayTaskState,
+  setIsPlay,
+  setPlayTaskCanceled,
+  setPlayTaskPending,
   setStatusText,
 } from '@/core/player/playStatus'
 import playerState from '@/store/player/state'
@@ -46,7 +51,7 @@ const createDelayNextTimeout = (delay: number) => {
     clearDelayNextTimeout()
     timeout = BackgroundTimer.setTimeout(() => {
       timeout = null
-      if (global.lx.isPlayedStop) return
+      if (global.lx.isPlayedStop || global.lx.isPlayTaskCanceled) return
       console.log('delay next timeout timeout', delay)
       void playNext(true)
     }, delay)
@@ -73,8 +78,19 @@ const diffCurrentMusicInfo = (curMusicInfo: LX.Music.MusicInfo | LX.Download.Lis
 }
 
 let cancelDelayRetry: (() => void) | null = null
+let playTaskToken = 0
+const createPlayTaskToken = () => ++playTaskToken
+const invalidatePlayTaskToken = () => {
+  playTaskToken += 1
+}
+const isValidPlayTask = (token: number) => {
+  return token == playTaskToken && !global.lx.isPlayedStop && !global.lx.isPlayTaskCanceled
+}
+
 const clearPendingPlayTask = () => {
+  invalidatePlayTaskToken()
   global.lx.gettingUrlId = ''
+  setPlayTaskPending(false)
   clearLoadTimeout()
   clearDelayNextTimeout()
   if (cancelDelayRetry) cancelDelayRetry()
@@ -82,19 +98,22 @@ const clearPendingPlayTask = () => {
 
 export const cancelPendingPlayTask = async() => {
   if (!canCancelPendingPlayTask()) return false
+  cancelPlayTaskState()
   clearPendingPlayTask()
+  setIsPlay(false)
   setStatusText('')
+  global.app_event.pause()
   await stop()
   return true
 }
 
-const delayRetry = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, isRefresh = false): Promise<string | null> => {
+const delayRetry = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, isRefresh = false, taskToken = playTaskToken): Promise<string | null> => {
   // if (cancelDelayRetry) cancelDelayRetry()
   return new Promise<string | null>((resolve, reject) => {
     const time = getRandom(2, 6)
     setStatusText(global.i18n.t('player__getting_url_delay_retry', { time }))
     const tiemout = setTimeout(() => {
-      getMusicPlayUrl(musicInfo, isRefresh, true).then((result) => {
+      getMusicPlayUrl(musicInfo, isRefresh, true, taskToken).then((result) => {
         cancelDelayRetry = null
         resolve(result)
       }).catch(async(err: any) => {
@@ -109,8 +128,9 @@ const delayRetry = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, i
     }
   })
 }
-const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, isRefresh = false, isRetryed = false): Promise<string | null> => {
+const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, isRefresh = false, isRetryed = false, taskToken = playTaskToken): Promise<string | null> => {
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
+  if (!isValidPlayTask(taskToken)) return null
   setStatusText(global.i18n.t('player__getting_url'))
   addLoadTimeout()
 
@@ -126,23 +146,23 @@ const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListIt
       musicInfo,
       isRefresh,
       onToggleSource(mInfo) {
-        if (diffCurrentMusicInfo(musicInfo)) return
+        if (!isValidPlayTask(taskToken) || diffCurrentMusicInfo(musicInfo)) return
         setStatusText(global.i18n.t('toggle_source_try'))
       },
     })
   }).then(url => {
-    if (global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)) return null
+    if (!isValidPlayTask(taskToken) || diffCurrentMusicInfo(musicInfo)) return null
 
     return url
   }).catch(async err => {
     // console.log('err', err.message)
-    if (global.lx.isPlayedStop ||
+    if (!isValidPlayTask(taskToken) ||
       diffCurrentMusicInfo(musicInfo) ||
       err.message == requestMsg.cancelRequest) return null
 
-    if (err.message == requestMsg.tooManyRequests) return delayRetry(musicInfo, isRefresh)
+    if (err.message == requestMsg.tooManyRequests) return delayRetry(musicInfo, isRefresh, taskToken)
 
-    if (!isRetryed) return getMusicPlayUrl(musicInfo, isRefresh, true)
+    if (!isRetryed) return getMusicPlayUrl(musicInfo, isRefresh, true, taskToken)
 
     throw err
   })
@@ -152,17 +172,20 @@ export const setMusicUrl = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
   // addLoadTimeout()
   if (!diffCurrentMusicInfo(musicInfo)) return
   clearPendingPlayTask()
+  const taskToken = createPlayTaskToken()
   global.lx.gettingUrlId = createGettingUrlId(musicInfo)
-  void getMusicPlayUrl(musicInfo, isRefresh).then((url) => {
-    if (!url) return
+  void getMusicPlayUrl(musicInfo, isRefresh, false, taskToken).then((url) => {
+    if (!url || !isValidPlayTask(taskToken)) return
     setResource(musicInfo, url, playerState.progress.nowPlayTime)
   }).catch((err: any) => {
+    if (!isValidPlayTask(taskToken)) return
     console.log(err)
+    setPlayTaskPending(true)
     setStatusText(err.message as string)
     global.app_event.error()
     addDelayNextTimeout()
   }).finally(() => {
-    if (musicInfo === playerState.playMusicInfo.musicInfo) {
+    if (taskToken == playTaskToken && musicInfo === playerState.playMusicInfo.musicInfo) {
       global.lx.gettingUrlId = ''
       clearLoadTimeout()
     }
@@ -205,7 +228,7 @@ const handleRestorePlay = async(restorePlayInfo: LX.Player.SavedPlayInfo) => {
   }).catch((err) => {
     console.log(err)
     if (musicInfo.id != playMusicInfo.musicInfo?.id) return
-    setStatusText(global.i18n.t('lyric__load_error'))
+    if (!canCancelPendingPlayTask()) setStatusText(global.i18n.t('lyric__load_error'))
   })
 
   if (settingState.setting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay) addPlayedList(playMusicInfo as LX.Player.PlayMusicInfo)
@@ -213,6 +236,7 @@ const handleRestorePlay = async(restorePlayInfo: LX.Player.SavedPlayInfo) => {
 
 
 const debouncePlay = debounceBackgroundTimer((musicInfo: LX.Player.PlayMusic) => {
+  if (global.lx.isPlayedStop || global.lx.isPlayTaskCanceled) return
   setMusicUrl(musicInfo)
 
   void getPicPath({ musicInfo, listId: playerState.playMusicInfo.listId }).then((url: string) => {
@@ -237,7 +261,7 @@ const debouncePlay = debounceBackgroundTimer((musicInfo: LX.Player.PlayMusic) =>
   }).catch((err) => {
     console.log(err)
     if (musicInfo.id != playerState.playMusicInfo.musicInfo?.id) return
-    setStatusText(global.i18n.t('lyric__load_error'))
+    if (!canCancelPendingPlayTask()) setStatusText(global.i18n.t('lyric__load_error'))
   })
 }, 200)
 
@@ -256,6 +280,7 @@ const handlePlay = async() => {
   }
 
   global.lx.isPlayedStop &&= false
+  setPlayTaskCanceled(false)
   resetRandomNextMusicInfo()
 
   if (global.lx.restorePlayInfo) {
@@ -274,6 +299,8 @@ const handlePlay = async() => {
 
   clearDelayNextTimeout()
   clearLoadTimeout()
+  setPlayTaskPending(true)
+  setStatusText(global.i18n.t('player__getting_url'))
 
 
   if (settingState.setting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay) addPlayedList(playMusicInfo as LX.Player.PlayMusicInfo)
@@ -612,6 +639,7 @@ export const playPrev = async(isAutoToggle = false): Promise<void> => {
  */
 export const play = () => {
   if (playerState.playMusicInfo.musicInfo == null) return
+  resetPlayTaskState()
   if (isEmpty()) {
     if (createGettingUrlId(playerState.playMusicInfo.musicInfo) != global.lx.gettingUrlId) setMusicUrl(playerState.playMusicInfo.musicInfo)
     return
@@ -623,6 +651,7 @@ export const play = () => {
  * 暂停播放
  */
 export const pause = async() => {
+  setIsPlay(false)
   await setPause()
 }
 
@@ -631,6 +660,7 @@ export const pause = async() => {
  */
 export const stop = async() => {
   await setStop()
+  clearPendingPlayTask()
   setTimeout(() => {
     global.app_event.stop()
   })
@@ -640,11 +670,12 @@ export const stop = async() => {
  * 播放、暂停播放切换
  */
 export const togglePlay = () => {
-  if (!playerState.isPlay && canCancelPendingPlayTask()) {
+  if (canCancelPendingPlayTask()) {
     void cancelPendingPlayTask()
     return
   }
   global.lx.isPlayedStop &&= false
+  setPlayTaskCanceled(false)
   if (playerState.isPlay) {
     void pause()
   } else {

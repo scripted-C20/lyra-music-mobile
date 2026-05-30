@@ -33,6 +33,7 @@ export default forwardRef<SonglistType, SonglistProps>(({
   }))
 
   const handleOpenDetail = (item: ListInfoItem, index: number) => {
+    global.lx.isSonglistDetailFromSearch = commonState.navActiveId == 'nav_search'
     navigations.pushSonglistDetailScreen(commonState.componentIds.home!, item)
   }
 

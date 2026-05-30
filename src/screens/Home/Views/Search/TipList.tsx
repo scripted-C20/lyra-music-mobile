@@ -1,26 +1,80 @@
 import { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
 import SearchTipList, { type SearchTipListProps as _SearchTipListProps, type SearchTipListType as _SearchTipListType } from '@/components/SearchTipList'
 import Button from '@/components/common/Button'
 import { createStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
+import { Icon } from '@/components/common/Icon'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import musicSdk from '@/utils/musicSdk'
 import searchState, { type InitState as SearchState } from '@/store/search/state'
 import { setSearchText, setTipList, setTipListInfo } from '@/core/search/search'
 import { debounce } from '@/utils'
+import { useDS } from '@/theme/useDS'
+import { useHeaderControlMetrics } from '../common/headerControls'
 
-export const ITEM_HEIGHT = scaleSizeH(36)
+export const ITEM_HEIGHT = scaleSizeH(42)
+
+interface MusicSearchTipModule {
+  tipSearch?: {
+    search: (text: string) => Promise<string[]>
+  }
+  musicSearch?: {
+    search: (text: string, page?: number, limit?: number) => Promise<{
+      list?: Array<Partial<Pick<LX.Music.MusicInfoOnline, 'name' | 'singer'>>>
+    }>
+  }
+}
+
+const MAX_TIP_COUNT = 8
+
+const normalizeTipText = (text: string) => text.replace(/\s+/g, ' ').trim()
+
+const normalizeTipList = (keyword: string, list: string[]) => {
+  const dedupe = new Set<string>()
+  const result: string[] = []
+  for (const item of list) {
+    const text = normalizeTipText(item)
+    if (!text || dedupe.has(text)) continue
+    dedupe.add(text)
+    result.push(text)
+    if (result.length >= MAX_TIP_COUNT) break
+  }
+
+  const searchText = normalizeTipText(keyword)
+  if (searchText && !dedupe.has(searchText)) result.unshift(searchText)
+  return result.slice(0, MAX_TIP_COUNT)
+}
+
+const getRealSearchTipList = async(keyword: string, source: SearchState['temp_source'], sourceSdk: MusicSearchTipModule) => {
+  if (!sourceSdk.musicSearch?.search) return []
+  const result = await sourceSdk.musicSearch.search(keyword, 1, MAX_TIP_COUNT)
+  return (result.list ?? []).map(info => {
+    const name = normalizeTipText(String(info.name ?? ''))
+    const singer = normalizeTipText(String(info.singer ?? ''))
+    return `${name}${singer ? ` - ${singer}` : ''}`
+  })
+}
+
+const getTipList = async(keyword: string, source: SearchState['temp_source']) => {
+  const sourceSdk = (musicSdk[source] ?? {}) as MusicSearchTipModule
+  let list: string[] = []
+
+  if (sourceSdk.tipSearch?.search) {
+    list = await sourceSdk.tipSearch.search(keyword).catch(() => [])
+  }
+  if (!list.length) {
+    list = await getRealSearchTipList(keyword, source, sourceSdk).catch(() => [])
+  }
+
+  return normalizeTipList(keyword, list)
+}
 
 export const debounceTipSearch = debounce((keyword: string, source: SearchState['temp_source'], callback: (list: string[]) => void) => {
-  const tipSearch = (musicSdk[source] as { tipSearch?: { search: (text: string) => Promise<string[]> } } | undefined)?.tipSearch
-  if (!tipSearch) {
-    callback([])
-    return
-  }
-  void tipSearch.search(keyword).then(callback).catch(() => {
-    callback([])
+  void getTipList(keyword, source).then(callback).catch(() => {
+    callback(normalizeTipList(keyword, []))
   })
-}, 200)
+}, 40)
 
 
 export type SearchTipListProps = _SearchTipListProps<string>
@@ -37,6 +91,10 @@ export interface TipListType {
 
 export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
   const searchTipListRef = useRef<SearchTipListType>(null)
+  const ds = useDS()
+  const controlMetrics = useHeaderControlMetrics()
+  const lineColor = ds.isDark ? 'rgba(255,255,255,0.07)' : 'rgba(60,60,67,0.12)'
+  const iconBg = ds.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(180,39,39,0.08)'
   const [visible, setVisible] = useState(false)
   const visibleListRef = useRef(false)
   const isUnmountedRef = useRef(false)
@@ -52,9 +110,13 @@ export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
     searchTipListRef.current?.setHeight(height)
     setSearchText(keyword)
     if (keyword) {
-      setTipListInfo(keyword, searchState.temp_source)
-      debounceTipSearch(keyword, searchState.temp_source, (list) => {
-        if (keyword != searchState.tipListInfo.text) return
+      const source = searchState.temp_source
+      setTipListInfo(keyword, source)
+      setTipList([])
+      searchTipListRef.current?.clearList()
+      searchTipListRef.current?.setList(normalizeTipList(keyword, []))
+      debounceTipSearch(keyword, source, (list) => {
+        if (keyword != searchState.tipListInfo.text || source != searchState.tipListInfo.source) return
         setTipList(list)
         if (!visibleListRef.current || isUnmountedRef.current) return
         searchTipListRef.current?.setList(list)
@@ -76,6 +138,7 @@ export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
 
   useImperativeHandle(ref, () => ({
     search(keyword, height) {
+      visibleListRef.current = Boolean(keyword)
       if (visible) handleSearch(keyword, height)
       else {
         setVisible(true)
@@ -104,8 +167,18 @@ export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
 
   const renderItem: SearchTipListProps['renderItem'] = ({ item, index }) => {
     return (
-      <Button style={styles.item} onPress={() => { onSearch(item) }} key={index}>
-        <Text numberOfLines={1}>{item}</Text>
+      <Button
+        style={[
+          styles.item,
+          index > 0 ? { borderTopColor: lineColor, borderTopWidth: StyleSheet.hairlineWidth } : null,
+        ]}
+        onPress={() => { onSearch(item) }}
+        key={index}
+      >
+        <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
+          <Icon name="search-2" size={controlMetrics.iconSize + 1} color={ds.accent} />
+        </View>
+        <Text size={controlMetrics.fontSize + 2} color={ds.text} numberOfLines={1} style={styles.itemText}>{item}</Text>
       </Button>
     )
   }
@@ -118,10 +191,16 @@ export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
     visible
       ? <SearchTipList
           ref={searchTipListRef}
+          ListHeaderComponent={(
+            <View style={[styles.header, { borderBottomColor: lineColor }]}>
+              <Text size={controlMetrics.fontSize} color={ds.textDim}>预搜索建议</Text>
+            </View>
+          )}
           renderItem={renderItem}
           onPressBg={() => searchTipListRef.current?.setList([])}
           keyExtractor={getkey}
           getItemLayout={getItemLayout}
+          contentContainerStyle={styles.listContent}
         />
       : null
   )
@@ -129,12 +208,33 @@ export default forwardRef<TipListType, TipListProps>(({ onSearch }, ref) => {
 
 
 const styles = createStyle({
+  header: {
+    height: 32,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   item: {
     height: ITEM_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 15,
-    paddingRight: 15,
-    // backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    paddingLeft: 18,
+    paddingRight: 18,
+    gap: 12,
+  },
+  iconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  itemText: {
+    flex: 1,
+    fontWeight: '400',
+  },
+  listContent: {
+    paddingBottom: 6,
   },
 })

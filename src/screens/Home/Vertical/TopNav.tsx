@@ -10,12 +10,14 @@ import StatusBar from '@/components/common/StatusBar'
 import Input, { type InputType, type InputProps } from '@/components/common/Input'
 import searchState from '@/store/search/state'
 import commonState from '@/store/common/state'
+import { useHeaderControlMetrics } from '../Views/common/headerControls'
 
 export default memo(() => {
   const activeId = useNavActiveId()
   const statusbarHeight = useStatusbarHeight()
   const ds = useDS()
   const t = useI18n()
+  const controlMetrics = useHeaderControlMetrics()
   const inputRef = useRef<InputType>(null)
   const prevActiveIdRef = useRef(activeId)
   const [searchText, setSearchText] = useState(searchState.searchText)
@@ -44,11 +46,20 @@ export default memo(() => {
   }, [activeId, isSearchActive])
 
   const handleSearchSubmit = (text: string) => { global.app_event.topNavSearchSubmit(text.trim()) }
-  const handleClearText = () => { setSearchText(''); global.app_event.topNavSearchSubmit('') }
-  const handleChangeText = (text: string) => { setSearchText(text) }
+  const handleClearText = () => { setSearchText(''); global.app_event.topNavSearchTextChange(''); global.app_event.topNavSearchSubmit('') }
+  const handleChangeText = (text: string) => {
+    setSearchText(text)
+    global.app_event.topNavSearchTextChange(text.trim())
+  }
   const handleInputSubmit = (({ nativeEvent: { text } }) => { handleSearchSubmit(text) }) as NonNullable<InputProps['onSubmitEditing']>
 
-  const goToSearch = () => { setNavActiveId('nav_search') }
+  const goToSearch = () => {
+    global.lx.shouldClearSearchOnOpen = true
+    setNavActiveId('nav_search')
+    requestAnimationFrame(() => {
+      global.app_event.topNavSearchOpen()
+    })
+  }
   const goBackFromSearch = () => {
     setNavActiveId(commonState.lastNavActiveId === 'nav_search' ? 'nav_songlist' : commonState.lastNavActiveId)
   }
@@ -60,26 +71,39 @@ export default memo(() => {
         <View style={styles.panel}>
           {/* 搜索页：返回icon + 搜索框 + 版本 */}
           {isSearchActive ? (
-            <View style={styles.row}>
+            <View style={[styles.row, { minHeight: controlMetrics.height + 10, gap: controlMetrics.rowGap * 2 }]}>
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={goBackFromSearch}
-                style={styles.backBtn}
+                style={[styles.backBtn, { width: controlMetrics.height + 4, height: controlMetrics.height + 4 }]}
               >
-                <Icon name="chevron-left" size={16} color={ds.text} />
+                <Icon name="chevron-left" size={controlMetrics.actionIconSize + 4} color={ds.text} />
               </TouchableOpacity>
 
-              <View style={[styles.searchEntry, { backgroundColor: ds.isDark ? ds.bgFloat : 'rgba(0,0,0,0.04)', flex: 1 }]}>
-                <Icon name="search-2" size={11} color={ds.textDim} />
+              <View
+                style={[
+                  styles.searchEntry,
+                  {
+                    backgroundColor: ds.isDark ? ds.bgFloat : 'rgba(0,0,0,0.04)',
+                    flex: 1,
+                    height: controlMetrics.height,
+                    borderRadius: controlMetrics.radius,
+                    paddingHorizontal: controlMetrics.horizontalPadding,
+                    gap: controlMetrics.gap,
+                  },
+                ]}
+              >
+                <Icon name="search-2" size={controlMetrics.iconSize + 1} color={ds.textDim} />
                 <Input
                   ref={inputRef}
+                  size={controlMetrics.fontSize}
                   value={searchText}
                   onChangeText={handleChangeText}
                   onSubmitEditing={handleInputSubmit}
                   onClearText={handleClearText}
                   placeholder={t('search_placeholder')}
                   placeholderTextColor={ds.textDim}
-                  style={[styles.searchInputInline, { color: ds.text }]}
+                  style={[styles.searchInputInline, { color: ds.text, height: controlMetrics.height }]}
                   returnKeyType="search"
                   clearBtn
                 />
@@ -88,31 +112,48 @@ export default memo(() => {
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={() => { handleSearchSubmit(searchText) }}
-                style={[styles.searchBtn, { backgroundColor: ds.accent }]}
+                style={[
+                  styles.searchBtn,
+                  {
+                    backgroundColor: ds.accent,
+                    height: controlMetrics.height,
+                    borderRadius: controlMetrics.radius,
+                    paddingHorizontal: controlMetrics.horizontalPadding + 4,
+                  },
+                ]}
               >
-                <Text size={11} color={ds.textOnAccent} style={styles.searchBtnText}>搜索</Text>
+                <Text size={controlMetrics.fontSize} color={ds.textOnAccent} style={styles.searchBtnText}>搜索</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <>
               {/* 一行：标题 + 搜索入口 + 版本号 */}
-              <View style={styles.row}>
-                <Text style={[styles.title, { color: ds.text }]} numberOfLines={1}>
+              <View style={[styles.row, { minHeight: controlMetrics.height + 10, gap: controlMetrics.rowGap * 2 }]}>
+                <Text size={controlMetrics.fontSize} style={[styles.title, { color: ds.text }]} numberOfLines={1}>
                   {title}
                 </Text>
 
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={goToSearch}
-                  style={[styles.searchEntry, { backgroundColor: ds.isDark ? ds.bgFloat : 'rgba(0,0,0,0.04)' }]}
+                  style={[
+                    styles.searchEntry,
+                    {
+                      backgroundColor: ds.isDark ? ds.bgFloat : 'rgba(0,0,0,0.04)',
+                      height: controlMetrics.height,
+                      borderRadius: controlMetrics.radius,
+                      paddingHorizontal: controlMetrics.horizontalPadding,
+                      gap: controlMetrics.gap,
+                    },
+                  ]}
                 >
-                  <Icon name="search-2" size={11} color={ds.textDim} />
-                  <Text size={11} color={ds.textDim} numberOfLines={1} style={styles.searchPlaceholder}>
+                  <Icon name="search-2" size={controlMetrics.iconSize + 1} color={ds.textDim} />
+                  <Text size={controlMetrics.fontSize} color={ds.textDim} numberOfLines={1} style={styles.searchPlaceholder}>
                     {t('search_placeholder')}
                   </Text>
                 </TouchableOpacity>
 
-                <Text size={11} color={ds.textDim} style={styles.version}>
+                <Text size={controlMetrics.fontSize} color={ds.textDim} style={styles.version}>
                   v{process.versions.app}
                 </Text>
               </View>
@@ -136,8 +177,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 34,
-    gap: 8,
   },
   backBtn: {
     width: 28,
@@ -146,7 +185,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 11,
     fontWeight: '400',
     letterSpacing: 0,
     flexShrink: 0,
@@ -155,27 +193,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    height: 24,
-    gap: 4,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 11,
   },
   searchInputInline: {
     flex: 1,
     backgroundColor: 'transparent',
-    height: 24,
     paddingLeft: 0,
     paddingRight: 0,
-    fontSize: 11,
   },
   searchBtn: {
-    height: 24,
-    paddingHorizontal: 12,
-    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -183,6 +211,5 @@ const styles = StyleSheet.create({
   version: {
     fontWeight: '400',
     flexShrink: 0,
-    fontSize: 11,
   },
 })

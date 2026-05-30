@@ -5,4 +5,6 @@ export {
   HEADER_CONTROL_HORIZONTAL_PADDING,
   HEADER_CONTROL_VERTICAL_PADDING,
   HEADER_CONTROL_GAP,
+  HEADER_CONTROL_ROW_GAP,
+  useHeaderControlMetrics,
 } from '../../common/headerControls'

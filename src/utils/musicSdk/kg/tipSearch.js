@@ -13,11 +13,12 @@ export default {
       },
     })
     return this.requestObj.then(body => {
-      return body[0].RecordDatas
+      return body?.[0]?.RecordDatas ?? []
     })
   },
   handleResult(rawData) {
-    return rawData.map(info => info.HintInfo)
+    if (!Array.isArray(rawData)) return []
+    return rawData.map(info => info.HintInfo).filter(Boolean)
   },
   async search(str) {
     return this.tipSearchBySong(str).then(result => this.handleResult(result))

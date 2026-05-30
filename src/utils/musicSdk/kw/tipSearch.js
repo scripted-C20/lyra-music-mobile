@@ -21,7 +21,8 @@ export default {
     })
   },
   handleResult(rawData) {
-    return rawData.map(item => item.RELWORD)
+    if (!Array.isArray(rawData)) return []
+    return rawData.map(item => item.RELWORD).filter(Boolean)
   },
   cancelTipSearch() {
     if (this.requestObj && this.requestObj.cancelHttp) this.requestObj.cancelHttp()

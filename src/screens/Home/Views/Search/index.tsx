@@ -1,14 +1,15 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { View } from 'react-native'
+import { View, type LayoutChangeEvent } from 'react-native'
 
 import HeaderBar, { type HeaderBarProps, type HeaderBarType } from './HeaderBar'
 import searchState, { type SearchType } from '@/store/search/state'
-import searchMusicState from '@/store/search/music/state'
-import searchSonglistState from '@/store/search/songlist/state'
+import searchMusicState, { type Source as MusicSource } from '@/store/search/music/state'
+import searchSonglistState, { type Source as SonglistSource } from '@/store/search/songlist/state'
 import { getSearchSetting, saveSearchSetting } from '@/utils/data'
 import { createStyle } from '@/utils/tools'
 import List, { type ListType } from './List'
-import { addHistoryWord, setTempSource } from '@/core/search/search'
+import TipList, { type TipListType } from './TipList'
+import { addHistoryWord, setSearchText, setTempSource } from '@/core/search/search'
 import { useBackHandler } from '@/utils/hooks/useBackHandler'
 import commonState from '@/store/common/state'
 import { setNavActiveId } from '@/core/common'
@@ -41,20 +42,50 @@ const resolveSource = (type: SearchType, source: SearchInfo['source'], tempSourc
 export default () => {
   const headerBarRef = useRef<HeaderBarType>(null)
   const listRef = useRef<ListType>(null)
+  const tipListRef = useRef<TipListType>(null)
+  const contentHeightRef = useRef(0)
+  const lastKeywordRef = useRef(searchState.searchText)
   const searchInfo = useRef<SearchInfo>({ temp_source: 'kw', source: 'kw', searchType: 'music' })
 
   useBackHandler(useCallback(() => {
+    if (global.lx.isSonglistDetailFromSearch && commonState.componentIds.songlistDetail) return false
     if (commonState.navActiveId != 'nav_search') return false
     setNavActiveId(commonState.lastNavActiveId == 'nav_search' ? 'nav_songlist' : commonState.lastNavActiveId)
     return true
   }, []))
 
+  const loadSearchList = useCallback((text: string) => {
+    const info = searchInfo.current
+    listRef.current?.loadList(text, {
+      music: resolveSource('music', info.source, info.temp_source) as MusicSource,
+      songlist: resolveSource('songlist', info.source, info.temp_source) as SonglistSource,
+    }, info.searchType)
+  }, [])
+
   const handleSearch = useCallback((text: string) => {
-    headerBarRef.current?.setText(text)
+    const keyword = text.trim()
+    tipListRef.current?.hide()
+    headerBarRef.current?.setText(keyword)
     headerBarRef.current?.blur()
-    global.app_event.topNavSearchTextUpdate(text)
-    void addHistoryWord(text)
-    listRef.current?.loadList(text, searchInfo.current.source, searchInfo.current.searchType)
+    lastKeywordRef.current = keyword
+    setSearchText(keyword)
+    global.app_event.topNavSearchTextUpdate(keyword)
+    void addHistoryWord(keyword)
+    loadSearchList(keyword)
+  }, [loadSearchList])
+
+  const clearSearch = useCallback(() => {
+    global.lx.shouldClearSearchOnOpen = false
+    tipListRef.current?.hide()
+    lastKeywordRef.current = ''
+    setSearchText('')
+    global.app_event.topNavSearchTextUpdate('')
+    global.app_event.topNavSearchTextChange('')
+    loadSearchList('')
+  }, [loadSearchList])
+
+  const handleContentLayout = useCallback(({ nativeEvent: { layout } }: LayoutChangeEvent) => {
+    contentHeightRef.current = layout.height
   }, [])
 
   useEffect(() => {
@@ -68,8 +99,10 @@ export default () => {
       headerBarRef.current?.setSourceList(getSourceList(searchType), source)
       headerBarRef.current?.setText(searchState.searchText)
       global.app_event.topNavSearchTextUpdate(searchState.searchText)
+      lastKeywordRef.current = searchState.searchText
       setTempSource(tempSource)
-      listRef.current?.loadList(searchState.searchText, source, searchType)
+      if (global.lx.shouldClearSearchOnOpen) clearSearch()
+      else loadSearchList(searchState.searchText)
     })
 
     const handleTypeChange = (type: SearchType) => {
@@ -81,17 +114,31 @@ export default () => {
       setTempSource(nextTempSource)
       headerBarRef.current?.setSourceList(getSourceList(type), nextSource)
       void saveSearchSetting({ type, source: nextSource, temp_source: nextTempSource })
-      listRef.current?.loadList(searchState.searchText, nextSource, type)
+      tipListRef.current?.hide()
+      loadSearchList(lastKeywordRef.current)
+    }
+
+    const handleSearchTextChange = (text: string) => {
+      if (commonState.navActiveId != 'nav_search') return
+      if (!text) {
+        tipListRef.current?.hide()
+        return
+      }
+      tipListRef.current?.search(text, contentHeightRef.current)
     }
 
     global.app_event.on('searchTypeChanged', handleTypeChange)
     global.app_event.on('topNavSearchSubmit', handleSearch)
+    global.app_event.on('topNavSearchTextChange', handleSearchTextChange)
+    global.app_event.on('topNavSearchOpen', clearSearch)
 
     return () => {
       global.app_event.off('searchTypeChanged', handleTypeChange)
       global.app_event.off('topNavSearchSubmit', handleSearch)
+      global.app_event.off('topNavSearchTextChange', handleSearchTextChange)
+      global.app_event.off('topNavSearchOpen', clearSearch)
     }
-  }, [handleSearch])
+  }, [clearSearch, handleSearch, loadSearchList])
 
   const handleSourceChange: HeaderBarProps['onSourceChange'] = (source) => {
     searchInfo.current.source = source
@@ -102,7 +149,8 @@ export default () => {
     } else {
       void saveSearchSetting({ source })
     }
-    listRef.current?.loadList(searchState.searchText, source, searchInfo.current.searchType)
+    tipListRef.current?.hide()
+    loadSearchList(lastKeywordRef.current)
   }
 
   return (
@@ -111,8 +159,9 @@ export default () => {
         ref={headerBarRef}
         onSourceChange={handleSourceChange}
       />
-      <View style={styles.content}>
+      <View style={styles.content} onLayout={handleContentLayout}>
         <List ref={listRef} onSearch={handleSearch} />
+        <TipList ref={tipListRef} onSearch={handleSearch} />
       </View>
     </View>
   )
@@ -125,5 +174,6 @@ const styles = createStyle({
   },
   content: {
     flex: 1,
+    position: 'relative',
   },
 })

@@ -1,6 +1,6 @@
 import { addPlayedList, clearPlayedList } from '@/core/player/playedList'
 import { pause, playNext } from '@/core/player/player'
-import { setStatusText, setIsPlay } from '@/core/player/playStatus'
+import { resetPlayTaskState, setPlayTaskPending, setStatusText, setIsPlay } from '@/core/player/playStatus'
 // import { resetPlayerMusicInfo } from '@/core/player/playInfo'
 import { setStop } from '@/plugins/player'
 import { updateOptions } from '@/plugins/player/utils'
@@ -46,6 +46,7 @@ export const syncNativePlaybackState = async() => {
 
 export default async(setting: LX.AppSetting) => {
   const setPlayStatus = () => {
+    resetPlayTaskState()
     setIsPlay(true)
   }
   const setPauseStatus = () => {
@@ -55,6 +56,10 @@ export default async(setting: LX.AppSetting) => {
 
   const handleEnded = () => {
     // setTimeout(() => {
+    if (global.lx.isPlayTaskCanceled) {
+      setStatusText('')
+      return
+    }
     if (global.lx.isPlayedStop) {
       setStatusText(global.i18n.t('player__end'))
       return
@@ -68,6 +73,7 @@ export default async(setting: LX.AppSetting) => {
   }
 
   const setStopStatus = () => {
+    setPlayTaskPending(false)
     setIsPlay(false)
     setStatusText('')
     void setStop()

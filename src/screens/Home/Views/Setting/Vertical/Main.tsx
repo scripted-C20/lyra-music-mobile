@@ -17,12 +17,7 @@ import Text from '@/components/common/Text'
 import { useDS } from '@/theme/useDS'
 import { useNavActiveId } from '@/store/common/hook'
 import {
-  HEADER_CONTROL_FONT_SIZE,
-  HEADER_CONTROL_HEIGHT,
-  HEADER_CONTROL_HORIZONTAL_PADDING,
-  HEADER_CONTROL_RADIUS,
-  HEADER_CONTROL_ROW_GAP,
-  HEADER_CONTROL_VERTICAL_PADDING,
+  useHeaderControlMetrics,
 } from '../../common/headerControls'
 
 const SETTING_LABELS: Record<SettingScreenIds, string> = {
@@ -65,6 +60,7 @@ const SettingContent = memo(({ id }: { id: TabId }) => {
 export default () => {
   const ds = useDS()
   const navActiveId = useNavActiveId()
+  const controlMetrics = useHeaderControlMetrics()
   const [activeId, setActiveId] = useState<TabId>(normalizeSettingScreenId(global.lx.settingActiveId))
 
   const handleSelect = useCallback((id: TabId) => {
@@ -93,7 +89,7 @@ export default () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { gap: controlMetrics.rowGap }]}
         >
           {ALL_TABS.map(id => {
             const active = activeId === id
@@ -104,13 +100,19 @@ export default () => {
                 onPress={() => { handleSelect(id) }}
                 style={[
                   styles.chip,
+                  {
+                    height: controlMetrics.height,
+                    paddingHorizontal: controlMetrics.horizontalPadding,
+                    paddingVertical: controlMetrics.verticalPadding,
+                    borderRadius: controlMetrics.radius,
+                  },
                   active
                     ? { backgroundColor: ds.accent }
                     : { backgroundColor: chipBg },
                 ]}
               >
                 <Text
-                  size={HEADER_CONTROL_FONT_SIZE}
+                  size={controlMetrics.fontSize}
                   color={active ? ds.textOnAccent : ds.text}
                   style={styles.chipText}
                 >
@@ -146,14 +148,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     alignItems: 'center',
-    gap: HEADER_CONTROL_ROW_GAP,
     paddingRight: 4,
   },
   chip: {
-    height: HEADER_CONTROL_HEIGHT,
-    paddingHorizontal: HEADER_CONTROL_HORIZONTAL_PADDING,
-    paddingVertical: HEADER_CONTROL_VERTICAL_PADDING,
-    borderRadius: HEADER_CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },
