@@ -2,7 +2,7 @@
 
 Lyra Music Mobile 是一个基于 React Native 的移动端音乐播放器项目。本仓库基于 LX Music Mobile 进行二次修改，主要面向 Android 端使用与学习交流。
 
-项目地址：<https://github.com/scripted-C20/-lyra-music-mobile>
+项目地址：<https://github.com/scripted-C20/lyra-music-mobile>
 
 ## 项目说明
 
