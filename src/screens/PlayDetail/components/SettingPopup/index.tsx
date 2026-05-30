@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import Popup, { type PopupType, type PopupProps } from '@/components/common/Popup'
 import { useI18n } from '@/lang'
@@ -8,6 +8,8 @@ import SettingVolume from './settings/SettingVolume'
 import SettingPlaybackRate from './settings/SettingPlaybackRate'
 import SettingLrcFontSize from './settings/SettingLrcFontSize'
 import SettingLrcAlign from './settings/SettingLrcAlign'
+import SettingMiniLyricAlign from './settings/SettingMiniLyricAlign'
+import SettingMiniLyricFontSize from './settings/SettingMiniLyricFontSize'
 
 export interface SettingPopupProps extends Omit<PopupProps, 'children'> {
   direction: 'vertical' | 'horizontal'
@@ -26,14 +28,17 @@ export default forwardRef<SettingPopupType, SettingPopupProps>(({ direction, ...
   useImperativeHandle(ref, () => ({
     show() {
       if (visible) popupRef.current?.setVisible(true)
-      else {
-        setVisible(true)
-        requestAnimationFrame(() => {
-          popupRef.current?.setVisible(true)
-        })
-      }
+      else setVisible(true)
     },
   }))
+
+  useEffect(() => {
+    if (!visible) return
+    const timer = setTimeout(() => {
+      popupRef.current?.setVisible(true)
+    }, 0)
+    return () => { clearTimeout(timer) }
+  }, [visible])
 
 
   return (
@@ -47,6 +52,8 @@ export default forwardRef<SettingPopupType, SettingPopupProps>(({ direction, ...
               <SettingPlaybackRate />
               <SettingLrcFontSize direction={direction} />
               <SettingLrcAlign />
+              {direction == 'vertical' ? <SettingMiniLyricFontSize /> : null}
+              {direction == 'vertical' ? <SettingMiniLyricAlign /> : null}
             </View>
           </ScrollView>
         </Popup>

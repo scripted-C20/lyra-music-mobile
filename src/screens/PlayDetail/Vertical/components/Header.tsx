@@ -1,10 +1,10 @@
-import { memo, useRef } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Easing, View, StyleSheet, type LayoutChangeEvent, type NativeSyntheticEvent, type TextLayoutEventData } from 'react-native'
 import { pop } from '@/navigation'
 import StatusBar from '@/components/common/StatusBar'
 import { useDS } from '@/theme/useDS'
 import { usePlayerMusicInfo } from '@/store/player/hook'
-import Text from '@/components/common/Text'
+import Text, { AnimatedText } from '@/components/common/Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { HEADER_HEIGHT as _HEADER_HEIGHT, NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
 import commonState from '@/store/common/state'
@@ -15,15 +15,121 @@ import Btn from './Btn'
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 export const PAGE_SIDE_PADDING = 18
 const TOP_SAFE_GAP = 8
+const TITLE_SCROLL_GAP = 52
+const TITLE_SCROLL_PAUSE = 900
+const TITLE_SCROLL_SPEED = 38
+const TITLE_MEASURE_WIDTH = 10000
 
 const Title = () => {
   const ds = useDS()
   const musicInfo = usePlayerMusicInfo()
+  const translateX = useRef(new Animated.Value(0)).current
+  const [containerWidth, setContainerWidth] = useState(0)
+  const [textWidth, setTextWidth] = useState(0)
+
+  const title = useMemo(() => {
+    const name = (musicInfo.name || '').trim()
+    const singer = (musicInfo.singer || '').trim()
+    if (name && singer) return `${name} - ${singer}`
+    return name || singer
+  }, [musicInfo.name, musicInfo.singer])
+
+  const overflow = textWidth > containerWidth + 1
+
+  useEffect(() => {
+    translateX.stopAnimation()
+    translateX.setValue(0)
+
+    if (!overflow || containerWidth <= 0 || textWidth <= 0) return
+
+    const distance = textWidth + TITLE_SCROLL_GAP
+    const duration = Math.max(3600, Math.round((distance / TITLE_SCROLL_SPEED) * 1000))
+    const animation = Animated.loop(Animated.sequence([
+      Animated.delay(TITLE_SCROLL_PAUSE),
+      Animated.timing(translateX, {
+        toValue: -distance,
+        duration,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ]))
+
+    animation.start()
+    return () => { animation.stop() }
+  }, [containerWidth, overflow, textWidth, title, translateX])
+
+  const handleContainerLayout = ({ nativeEvent }: LayoutChangeEvent) => {
+    const nextWidth = nativeEvent.layout.width
+    if (Number.isFinite(nextWidth) && nextWidth > 0) setContainerWidth(nextWidth)
+  }
+
+  const updateTextWidth = (nextWidth: number) => {
+    if (!Number.isFinite(nextWidth) || nextWidth <= 0) return
+    setTextWidth(prevWidth => Math.abs(prevWidth - nextWidth) > 1 ? nextWidth : prevWidth)
+  }
+
+  const handleTextLayout = ({ nativeEvent }: NativeSyntheticEvent<TextLayoutEventData>) => {
+    const nextWidth = nativeEvent.lines?.[0]?.width
+    if (typeof nextWidth == 'number') updateTextWidth(nextWidth)
+  }
+
   return (
-    <View style={styles.titleBlock}>
-      <Text numberOfLines={1} size={17} style={[styles.name, { color: ds.text }]}>
-        {musicInfo.name || ''}
-      </Text>
+    <View style={styles.titleBlock} onLayout={handleContainerLayout}>
+      <View style={[styles.titleViewport, overflow ? styles.titleViewportLeft : styles.titleViewportCenter]}>
+        <Animated.View
+          style={[
+            overflow ? styles.marqueeTrack : styles.staticTitleTrack,
+            {
+              transform: [{ translateX: overflow ? translateX : 0 }],
+            },
+          ]}
+        >
+          <AnimatedText
+            numberOfLines={1}
+            size={17}
+            style={[
+              styles.name,
+              {
+                width: overflow ? textWidth : '100%',
+                color: ds.text,
+                textAlign: overflow ? 'left' : 'center',
+              },
+            ]}
+          >
+            {title}
+          </AnimatedText>
+          {overflow ? (
+            <>
+              <View style={{ width: TITLE_SCROLL_GAP }} />
+              <AnimatedText
+                numberOfLines={1}
+                size={17}
+                style={[
+                  styles.name,
+                  {
+                    width: textWidth,
+                    color: ds.text,
+                    textAlign: 'left',
+                  },
+                ]}
+              >
+                {title}
+              </AnimatedText>
+            </>
+          ) : null}
+        </Animated.View>
+      </View>
+      <View pointerEvents="none" style={styles.measureWrap}>
+        <Text
+          numberOfLines={1}
+          size={17}
+          style={[styles.name, styles.measureText]}
+          onTextLayout={handleTextLayout}
+          onLayout={({ nativeEvent }) => { updateTextWidth(nativeEvent.layout.width) }}
+        >
+          {title}
+        </Text>
+      </View>
     </View>
   )
 }
@@ -96,6 +202,23 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 38,
   },
+  titleViewport: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  titleViewportCenter: {
+    alignItems: 'center',
+  },
+  titleViewportLeft: {
+    alignItems: 'flex-start',
+  },
+  staticTitleTrack: {
+    width: '100%',
+  },
+  marqueeTrack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   name: {
     fontWeight: '800',
     textAlign: 'center',
@@ -105,24 +228,17 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0.8 },
     textShadowRadius: 5,
   },
-  singerRow: {
-    marginTop: 4,
-    maxWidth: '86%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+  measureText: {
+    alignSelf: 'flex-start',
+    textAlign: 'left',
   },
-  singerDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.82,
-  },
-  singer: {
-    textAlign: 'center',
-    fontWeight: '700',
-    letterSpacing: -0.2,
-    includeFontPadding: false,
+  measureWrap: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: TITLE_MEASURE_WIDTH,
+    opacity: 0,
+    zIndex: -1,
+    overflow: 'visible',
   },
 })

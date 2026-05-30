@@ -12,14 +12,18 @@ import commonState from '@/store/common/state'
 import { useDS } from '@/theme/useDS'
 import Text from '@/components/common/Text'
 import { useLrcPlay, useLrcSet } from '@/plugins/lyric'
+import { useSettingValue } from '@/store/setting/hook'
 
+const MINI_LYRIC_RECORD_GAP = 20
 // 衔接到进度条的迷你歌词：显示当前行 + 前后几行，播放时自动滚动
 const MiniLyric = ({ activeColor, dimColor, height }: { activeColor: string, dimColor: string, height: number }) => {
   const lyricLines = useLrcSet()
   const { line } = useLrcPlay()
-  const LINE_HEIGHT = 26
-  const VISIBLE = Math.max(3, Math.floor(height / LINE_HEIGHT))
-  const wrapHeight = VISIBLE * LINE_HEIGHT
+  const align = useSettingValue('playDetail.vertical.style.miniLyricAlign')
+  const fontSize = useSettingValue('playDetail.vertical.style.miniLyricFontSize')
+  const LINE_HEIGHT = Math.round(fontSize * 2.05)
+  const wrapHeight = Math.max(LINE_HEIGHT, height)
+  const activeLineTop = Math.max(0, (wrapHeight - LINE_HEIGHT) / 2)
   const translateAnim = useRef(new Animated.Value(0)).current
 
   const validLines = useMemo(() => lyricLines.filter(l => !!l.text.trim()), [lyricLines])
@@ -36,28 +40,38 @@ const MiniLyric = ({ activeColor, dimColor, height }: { activeColor: string, dim
   }, [line, lyricLines, validLines])
 
   useEffect(() => {
-    const target = activeIdx < 0 ? 0 : activeIdx
+    const rawOffset = (activeIdx < 0 ? 0 : activeIdx) * LINE_HEIGHT
+    const contentHeight = activeLineTop + validLines.length * LINE_HEIGHT
+    const maxOffset = Math.max(0, contentHeight - wrapHeight)
+    const target = Math.min(rawOffset, maxOffset)
     Animated.timing(translateAnim, {
-      toValue: -target * LINE_HEIGHT,
+      toValue: -target,
       duration: 500,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start()
-  }, [activeIdx, translateAnim])
+  }, [LINE_HEIGHT, activeIdx, activeLineTop, translateAnim, validLines.length, wrapHeight])
 
   if (!hasLyric) return <View style={{ height: wrapHeight }} />
 
   return (
     <View style={[styles.miniLyricWrap, { height: wrapHeight }]}>
-      <Animated.View style={{ transform: [{ translateY: translateAnim }], paddingTop: (Math.floor(VISIBLE / 2)) * LINE_HEIGHT }}>
+      <Animated.View style={{ width: '100%', transform: [{ translateY: translateAnim }], paddingTop: activeLineTop }}>
         {validLines.map((l, idx) => {
           const active = idx === activeIdx
           return (
             <View key={idx} style={[styles.miniLine, { height: LINE_HEIGHT }]}>
               <Text
-                size={active ? 14 : 12.5}
+                size={active ? fontSize + 1 : fontSize}
                 color={active ? activeColor : dimColor}
-                style={[styles.miniLineText, { opacity: active ? 1 : 0.5, fontWeight: active ? '700' : '500' }]}
+                style={[
+                  styles.miniLineText,
+                  {
+                    opacity: active ? 1 : 0.5,
+                    fontWeight: active ? '700' : '500',
+                    textAlign: align,
+                  },
+                ]}
                 numberOfLines={1}
               >
                 {l.text.trim()}
@@ -141,12 +155,12 @@ export default ({ componentId }: { componentId: string }) => {
   const armThickness = Math.max(10, recordSize * 0.032)
   const ringScales = [0.96, 0.88, 0.8, 0.72, 0.64, 0.56]
   const artworkOffsetY = Math.max(8, Math.min(20, contentHeight * 0.024))
+  const miniLyricVisualGap = artworkOffsetY + MINI_LYRIC_RECORD_GAP
   const miniLyricHeight = useMemo(() => {
-    const singerHeight = musicInfo.singer ? 44 : 0
-    const usedHeight = 8 + artworkOffsetY + stageSize.height + singerHeight + 8
+    const usedHeight = 6 + artworkOffsetY + stageSize.height + MINI_LYRIC_RECORD_GAP
     const remainingHeight = contentHeight - usedHeight
-    return Math.round(Math.max(104, Math.min(224, contentHeight * 0.34, remainingHeight + 22)))
-  }, [artworkOffsetY, contentHeight, musicInfo.singer, stageSize.height])
+    return Math.round(Math.max(48, remainingHeight))
+  }, [artworkOffsetY, contentHeight, stageSize.height])
   const handleLayout = ({ nativeEvent }: LayoutChangeEvent) => {
     const nextHeight = nativeEvent.layout.height
     if (!Number.isFinite(nextHeight) || nextHeight <= 0) return
@@ -312,23 +326,8 @@ export default ({ componentId }: { componentId: string }) => {
         </View>
       </View>
 
-      {/* 歌手副标题 */}
-      {musicInfo.singer ? (
-        <View style={styles.singerRow}>
-          <View style={[styles.singerDot, { backgroundColor: ds.accent }]} />
-          <Text
-            size={13}
-            color={ds.isDark ? 'rgba(255,255,255,0.8)' : 'rgba(45,45,50,0.72)'}
-            style={styles.singerText}
-            numberOfLines={1}
-          >
-            {musicInfo.singer}
-          </Text>
-        </View>
-      ) : null}
-
       {/* 迷你歌词（衔接进度条，播放时自动滚动） */}
-      <View style={styles.lyricBlock}>
+      <View style={[styles.lyricBlock, { marginTop: miniLyricVisualGap }]}>
         <MiniLyric
           activeColor={ds.isDark ? '#ffffff' : ds.text}
           dimColor={ds.isDark ? 'rgba(255,255,255,0.55)' : 'rgba(55,48,48,0.6)'}
@@ -359,32 +358,11 @@ const styles = StyleSheet.create({
     opacity: 0.88,
     transform: [{ scaleX: 1.08 }],
   },
-  singerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 22,
-    maxWidth: '80%',
-  },
-  singerDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.82,
-  },
-  singerText: {
-    textAlign: 'center',
-    fontWeight: '700',
-    letterSpacing: -0.2,
-    includeFontPadding: false,
-  },
   lyricBlock: {
     flex: 0,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    marginTop: 8,
   },
   miniLyricWrap: {
     width: '100%',
@@ -398,7 +376,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   miniLineText: {
-    textAlign: 'center',
+    width: '100%',
     letterSpacing: -0.2,
     includeFontPadding: false,
   },

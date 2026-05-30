@@ -135,6 +135,7 @@ const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
 })
 const wait = async() => new Promise(resolve => setTimeout(resolve, 100))
 const DEFAULT_LYRIC_HEIGHT = 360
+const DEFAULT_LINE_HEIGHT = 46
 
 const getCenterPosition = (height: number) => {
   if (!Number.isFinite(height) || height <= 0) return 0.34
@@ -144,11 +145,67 @@ const getCenterPosition = (height: number) => {
   return 0.36
 }
 
-const getSpaceHeight = (height: number, lineCount: number) => {
+const getVisibleTailCount = (lines: Line[], index: number) => {
+  if (index < 0) return lines.filter(hasVisibleLine).length
+  return lines.slice(index + 1).filter(hasVisibleLine).length
+}
+
+const getActiveViewPosition = (height: number, lines: Line[], index: number) => {
+  const basePosition = getCenterPosition(height)
+  const tailCount = getVisibleTailCount(lines, index)
+
+  if (tailCount <= 2) return Math.min(0.63, basePosition + 0.17)
+  if (tailCount <= 5) return Math.min(0.58, basePosition + 0.12)
+  if (tailCount <= 8) return Math.min(0.53, basePosition + 0.07)
+  return basePosition
+}
+
+const getFallbackSpaceHeight = (height: number, lineCount: number) => {
   const safeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_LYRIC_HEIGHT
   const compactMax = lineCount <= 5 ? 42 : lineCount <= 10 ? 68 : 96
   const compactRatio = lineCount <= 5 ? 0.09 : lineCount <= 10 ? 0.14 : 0.18
   return Math.max(14, Math.min(compactMax, safeHeight * compactRatio))
+}
+
+const getMeasuredLineHeight = (lineHeights: number[], lineCount: number) => {
+  const measured = lineHeights.filter(height => Number.isFinite(height) && height > 0)
+  if (!measured.length) return DEFAULT_LINE_HEIGHT
+  const average = measured.reduce((total, height) => total + height, 0) / measured.length
+  if (!Number.isFinite(average) || average <= 0) return DEFAULT_LINE_HEIGHT
+  return Math.max(32, Math.min(68, average))
+}
+
+const getDynamicSpaceHeight = (height: number, lineCount: number, lineHeights: number[]) => {
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_LYRIC_HEIGHT
+  if (!lineCount) return 0
+  const lineHeight = getMeasuredLineHeight(lineHeights, lineCount)
+  const measuredTotalHeight = lineHeights.reduce((total, item) => {
+    return total + (Number.isFinite(item) && item > 0 ? item : lineHeight)
+  }, 0)
+  const estimatedTotalHeight = Math.max(measuredTotalHeight, lineCount * lineHeight)
+  const compactFallback = getFallbackSpaceHeight(safeHeight, lineCount)
+  const activeLineCenter = safeHeight * getCenterPosition(safeHeight) - lineHeight * 0.5
+  const shortLyricSpace = Math.max(10, Math.min(38, (safeHeight - estimatedTotalHeight) * 0.18))
+
+  if (lineCount <= 2) return shortLyricSpace
+  if (estimatedTotalHeight <= safeHeight * 0.62) {
+    return Math.max(10, Math.min(compactFallback, shortLyricSpace))
+  }
+  return Math.max(12, Math.min(safeHeight * 0.18, activeLineCenter))
+}
+
+const getDynamicFooterHeight = (height: number, lineCount: number, headerHeight: number, lineHeights: number[]) => {
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_LYRIC_HEIGHT
+  if (!lineCount) return 0
+  const lineHeight = getMeasuredLineHeight(lineHeights, lineCount)
+  const measuredTotalHeight = lineHeights.reduce((total, item) => {
+    return total + (Number.isFinite(item) && item > 0 ? item : lineHeight)
+  }, 0)
+  const contentRatio = measuredTotalHeight / safeHeight
+  if (contentRatio < 0.55) return Math.max(6, Math.min(18, safeHeight * 0.028))
+  if (lineCount <= 2) return Math.max(8, Math.min(20, safeHeight * 0.034))
+  if (lineCount <= 6) return Math.max(12, Math.min(28, safeHeight * 0.045))
+  return Math.max(18, Math.min(42, safeHeight * 0.06, headerHeight * 0.46))
 }
 
 export default () => {
@@ -165,8 +222,10 @@ export default () => {
   const scrollInfoRef = useRef<NativeSyntheticEvent<NativeScrollEvent>['nativeEvent'] | null>(null)
   const listLayoutInfoRef = useRef<{ spaceHeight: number, lineHeights: number[] }>({ spaceHeight: 0, lineHeights: [] })
   const scrollCancelRef = useRef<(() => void) | null>(null)
+  const layoutUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isShowLyricProgressSetting = useSettingValue('playDetail.isShowLyricProgressSetting')
   const [containerHeight, setContainerHeight] = useState(DEFAULT_LYRIC_HEIGHT)
+  const [lineLayoutVersion, setLineLayoutVersion] = useState(0)
   // useLock()
   // const [imgUrl, setImgUrl] = useState(null)
   // const theme = useGetter('common', 'theme')
@@ -184,6 +243,7 @@ export default () => {
     if (index < 0) return
     if (flatListRef.current) {
       // console.log('handleScrollToActive', index)
+      const viewPosition = getActiveViewPosition(scrollInfoRef.current?.layoutMeasurement.height ?? containerHeight, lyricLines, index)
       if (scrollInfoRef.current && lineRef.current.line - lineRef.current.prevLine == 1) {
         let offset = listLayoutInfoRef.current.spaceHeight
         for (let line = 0; line < index; line++) {
@@ -191,7 +251,6 @@ export default () => {
         }
         offset += (listLayoutInfoRef.current.lineHeights[line] ?? 0) / 2
         try {
-          const viewPosition = getCenterPosition(scrollInfoRef.current.layoutMeasurement.height)
           scrollCancelRef.current = scrollTo(flatListRef.current, scrollInfoRef.current, offset - scrollInfoRef.current.layoutMeasurement.height * viewPosition, 600, () => {
             scrollCancelRef.current = null
           })
@@ -205,7 +264,7 @@ export default () => {
           flatListRef.current.scrollToIndex({
             index,
             animated: true,
-            viewPosition: getCenterPosition(containerHeight),
+            viewPosition,
           })
         } catch {}
       }
@@ -250,6 +309,10 @@ export default () => {
 
   useEffect(() => {
     return () => {
+      if (layoutUpdateTimeoutRef.current) {
+        clearTimeout(layoutUpdateTimeoutRef.current)
+        layoutUpdateTimeoutRef.current = null
+      }
       if (delayScrollTimeout.current) {
         clearTimeout(delayScrollTimeout.current)
         delayScrollTimeout.current = null
@@ -264,6 +327,7 @@ export default () => {
   useEffect(() => {
     // linesRef.current = lyricLines
     listLayoutInfoRef.current.lineHeights = []
+    setLineLayoutVersion(version => version + 1)
     lineRef.current.prevLine = 0
     const initialLine = findFirstVisibleLineIndex(lyricLines)
     lineRef.current.line = initialLine
@@ -323,10 +387,21 @@ export default () => {
     })
   }
 
-  const handleLineLayout = useCallback<LineProps['onLayout']>((lineNum, height) => {
-    listLayoutInfoRef.current.lineHeights[lineNum] = height
-    playLineRef.current?.updateLayoutInfo(listLayoutInfoRef.current)
+  const scheduleLayoutUpdate = useCallback(() => {
+    if (layoutUpdateTimeoutRef.current) return
+    layoutUpdateTimeoutRef.current = setTimeout(() => {
+      layoutUpdateTimeoutRef.current = null
+      playLineRef.current?.updateLayoutInfo(listLayoutInfoRef.current)
+      setLineLayoutVersion(version => version + 1)
+    }, 80)
   }, [])
+
+  const handleLineLayout = useCallback<LineProps['onLayout']>((lineNum, height) => {
+    const prevHeight = listLayoutInfoRef.current.lineHeights[lineNum]
+    if (Math.abs((prevHeight ?? 0) - height) <= 1) return
+    listLayoutInfoRef.current.lineHeights[lineNum] = height
+    scheduleLayoutUpdate()
+  }, [scheduleLayoutUpdate])
 
   const handleSpaceLayout = useCallback(({ nativeEvent }: LayoutChangeEvent) => {
     listLayoutInfoRef.current.spaceHeight = nativeEvent.layout.height
@@ -367,9 +442,20 @@ export default () => {
   ), [ds])
   const hasLyric = useMemo(() => lyricLines.some(hasVisibleLine), [lyricLines])
   const visibleLineCount = useMemo(() => lyricLines.filter(hasVisibleLine).length, [lyricLines])
-  const spaceComponent = useMemo(() => (
-    <View style={{ height: getSpaceHeight(containerHeight, visibleLineCount) }} onLayout={handleSpaceLayout}></View>
-  ), [containerHeight, handleSpaceLayout, visibleLineCount])
+  const spaceHeight = useMemo(() => {
+    return getDynamicSpaceHeight(containerHeight, visibleLineCount, listLayoutInfoRef.current.lineHeights)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerHeight, lineLayoutVersion, visibleLineCount])
+  const footerHeight = useMemo(() => {
+    return getDynamicFooterHeight(containerHeight, visibleLineCount, spaceHeight, listLayoutInfoRef.current.lineHeights)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerHeight, lineLayoutVersion, spaceHeight, visibleLineCount])
+  const headerSpaceComponent = useMemo(() => (
+    <View style={{ height: spaceHeight }} onLayout={handleSpaceLayout}></View>
+  ), [handleSpaceLayout, spaceHeight])
+  const footerSpaceComponent = useMemo(() => (
+    <View style={{ height: footerHeight }}></View>
+  ), [footerHeight])
 
   return (
     <>
@@ -382,9 +468,9 @@ export default () => {
         contentContainerStyle={hasLyric ? styles.content : styles.emptyContent}
         ref={flatListRef}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={hasLyric ? spaceComponent : null}
+        ListHeaderComponent={hasLyric ? headerSpaceComponent : null}
         ListEmptyComponent={emptyComponent}
-        ListFooterComponent={hasLyric ? spaceComponent : null}
+        ListFooterComponent={hasLyric ? footerSpaceComponent : null}
         onScrollBeginDrag={handleScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
         fadingEdgeLength={100}

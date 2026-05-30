@@ -100,6 +100,7 @@ public class LyricModule extends ReactContextBaseJavaModule implements Lifecycle
     FlymeStatusBarLyric flymeLyric = getFlymeStatusBarLyric();
     if (flymeLyric.isSupported()) {
       lyric.setCurrentLyricHandler(flymeLyric::setLyric);
+      if (statusBarLyric != null) statusBarLyric.hideDesktopLyric();
       flymeLyric.show();
       lyric.showNativeStatusBarLyric(promise);
     } else {

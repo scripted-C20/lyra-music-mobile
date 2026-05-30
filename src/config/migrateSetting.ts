@@ -49,6 +49,12 @@ export default (setting: any): Partial<LX.AppSetting> => {
     if (!setting['playDetail.style.align'] || setting['playDetail.style.align'] == 'left') {
       setting['playDetail.style.align'] = 'center'
     }
+    if (setting['playDetail.vertical.style.miniLyricAlign'] == null) {
+      setting['playDetail.vertical.style.miniLyricAlign'] = 'center'
+    }
+    if (setting['playDetail.vertical.style.miniLyricFontSize'] == null) {
+      setting['playDetail.vertical.style.miniLyricFontSize'] = 13
+    }
   }
 
   return setting

@@ -222,6 +222,16 @@ declare global {
       'playDetail.vertical.style.lrcFontSize': number
 
       /**
+       * 竖屏封面页迷你歌词布局
+       */
+      'playDetail.vertical.style.miniLyricAlign': 'center' | 'left' | 'right'
+
+      /**
+       * 竖屏封面页迷你歌词字体大小
+       */
+      'playDetail.vertical.style.miniLyricFontSize': number
+
+      /**
        * 横屏歌词字体大小
        */
       'playDetail.horizontal.style.lrcFontSize': number

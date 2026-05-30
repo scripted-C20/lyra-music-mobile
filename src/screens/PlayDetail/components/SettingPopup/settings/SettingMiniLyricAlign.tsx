@@ -7,7 +7,7 @@ import { updateSetting } from '@/core/common'
 import { useI18n } from '@/lang'
 import { useDS } from '@/theme/useDS'
 
-type Align_Type = LX.AppSetting['playDetail.style.align']
+type AlignType = LX.AppSetting['playDetail.vertical.style.miniLyricAlign']
 
 const ALIGN_LIST = [
   'left',
@@ -16,12 +16,12 @@ const ALIGN_LIST = [
 ] as const
 
 const Item = ({ id, name, change }: {
-  id: Align_Type
+  id: AlignType
   name: string
-  change: (id: Align_Type) => void
+  change: (id: AlignType) => void
 }) => {
   const ds = useDS()
-  const align = useSettingValue('playDetail.style.align')
+  const align = useSettingValue('playDetail.vertical.style.miniLyricAlign')
   const isActive = useMemo(() => align == id, [align, id])
 
   return (
@@ -54,19 +54,19 @@ export default () => {
     return ALIGN_LIST.map(id => ({ id, name: t(`play_detail_setting_lrc_align_${id}`) }))
   }, [t])
 
-  const setPosition = (id: Align_Type) => {
-    updateSetting({ 'playDetail.style.align': id })
+  const setAlign = (id: AlignType) => {
+    updateSetting({ 'playDetail.vertical.style.miniLyricAlign': id })
   }
 
   return (
     <View style={localStyles.container}>
       <View style={localStyles.header}>
-        <Text size={13} color={ds.text} style={localStyles.title}>{t('play_detail_setting_lrc_align')}</Text>
-        <Text size={10.5} color={ds.textMuted} style={localStyles.desc}>{t('play_detail_setting_lrc_align_desc')}</Text>
+        <Text size={13} color={ds.text} style={localStyles.title}>{t('play_detail_setting_mini_lrc_align')}</Text>
+        <Text size={10.5} color={ds.textMuted} style={localStyles.desc}>{t('play_detail_setting_mini_lrc_align_desc')}</Text>
       </View>
       <View style={[localStyles.segment, { backgroundColor: ds.fill1, borderColor: ds.separator }]}>
         {
-          list.map(({ id, name }) => <Item name={name} id={id} key={id} change={setPosition} />)
+          list.map(({ id, name }) => <Item name={name} id={id} key={id} change={setAlign} />)
         }
       </View>
     </View>
